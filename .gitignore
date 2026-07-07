@@ -2,9 +2,10 @@ node_modules/
 .expo/
 dist/
 *.tsbuildinfo
-server/src/.env
+server/.env
 .DS_Store
 
 
 
 expo-env.d.ts
+rm
