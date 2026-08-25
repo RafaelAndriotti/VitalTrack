@@ -5,6 +5,15 @@ dist/
 server/.env
 .DS_Store
 
+# SQLite database files (contain PII — never commit)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+server/data/
+backup*
+
 
 
 expo-env.d.ts

@@ -1,25 +1,39 @@
 import { Router, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { AuthRequest, authenticate } from "../middleware/auth.js";
-import { supabase } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
 
+// Load a meal with its items, scoped to the owner. Returns undefined if the
+// meal does not belong to the user (used both for reads and 404s).
+function getMealWithItems(mealId: string, userId: string) {
+  const meal = db
+    .prepare("SELECT * FROM meals WHERE id = ? AND user_id = ?")
+    .get(mealId, userId) as Record<string, unknown> | undefined;
+  if (!meal) return undefined;
+  meal.meal_items = db
+    .prepare("SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC")
+    .all(mealId);
+  return meal;
+}
+
 // GET /api/meals/library/foods — list global and user's food
 router.get("/library/foods", async (req: AuthRequest, res: Response) => {
   try {
-    const { data, error } = await supabase
-      .from("food_library")
-      .select("*")
-      .or(`user_id.eq.${req.userId},user_id.is.null`)
-      .order("name", { ascending: true });
-
-    if (error) throw error;
+    const data = db
+      .prepare(
+        `SELECT * FROM food_library
+         WHERE user_id = ? OR user_id IS NULL
+         ORDER BY name ASC`
+      )
+      .all(req.userId!);
     res.json(data);
   } catch (err) {
-    console.error("List food library error:", err);
+    console.error("List food library error:", (err as Error).message);
     res.status(500).json({ error: "Failed to fetch food library" });
   }
 });
@@ -33,24 +47,25 @@ router.post("/library/foods", async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("food_library")
-      .insert({
-        user_id: req.userId!,
-        name,
-        calories: calories || 0,
-        protein: protein || 0,
-        carbs: carbs || 0,
-        fat: fat || 0,
-        serving_size: serving_size || 100,
-      })
-      .select("*")
-      .single();
+    const id = randomUUID();
+    db.prepare(
+      `INSERT INTO food_library (id, user_id, name, calories, protein, carbs, fat, serving_size)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      id,
+      req.userId!,
+      name,
+      calories || 0,
+      protein || 0,
+      carbs || 0,
+      fat || 0,
+      serving_size || 100
+    );
 
-    if (error) throw error;
+    const data = db.prepare("SELECT * FROM food_library WHERE id = ?").get(id);
     res.status(201).json(data);
   } catch (err) {
-    console.error("Create food library error:", err);
+    console.error("Create food library error:", (err as Error).message);
     res.status(500).json({ error: "Failed to create food in library" });
   }
 });
@@ -60,20 +75,17 @@ router.delete("/library/foods/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const { error, count } = await supabase
-      .from("food_library")
-      .delete({ count: "exact" })
-      .eq("id", id)
-      .eq("user_id", req.userId!);
+    const info = db
+      .prepare("DELETE FROM food_library WHERE id = ? AND user_id = ?")
+      .run(id, req.userId!);
 
-    if (error) throw error;
-    if (count === 0) {
+    if (info.changes === 0) {
       res.status(404).json({ error: "Food not found or cannot be deleted" });
       return;
     }
     res.status(204).send();
   } catch (err) {
-    console.error("Delete food library error:", err);
+    console.error("Delete food library error:", (err as Error).message);
     res.status(500).json({ error: "Failed to delete food from library" });
   }
 });
@@ -83,23 +95,30 @@ router.get("/", async (req: AuthRequest, res: Response) => {
   try {
     const { date } = req.query;
 
-    let query = supabase
-      .from("meals")
-      .select("*, meal_items(*)")
-      .eq("user_id", req.userId!)
-      .order("created_at", { ascending: true });
+    const meals = (
+      date && typeof date === "string"
+        ? db
+            .prepare(
+              "SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at ASC"
+            )
+            .all(req.userId!, date)
+        : db
+            .prepare(
+              "SELECT * FROM meals WHERE user_id = ? ORDER BY created_at ASC"
+            )
+            .all(req.userId!)
+    ) as Record<string, unknown>[];
 
-    if (date && typeof date === "string") {
-      query = query.eq("date", date);
+    const itemStmt = db.prepare(
+      "SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC"
+    );
+    for (const meal of meals) {
+      meal.meal_items = itemStmt.all(meal.id as string);
     }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    res.json(data);
+    res.json(meals);
   } catch (err) {
-    console.error("List meals error:", err);
+    console.error("List meals error:", (err as Error).message);
     res.status(500).json({ error: "Failed to fetch meals" });
   }
 });
@@ -114,22 +133,20 @@ router.post("/", async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("meals")
-      .insert({
-        user_id: req.userId!,
-        name,
-        date: date || new Date().toISOString().split("T")[0],
-        time: time || null,
-      })
-      .select("*, meal_items(*)")
-      .single();
+    const id = randomUUID();
+    db.prepare(
+      "INSERT INTO meals (id, user_id, name, date, time) VALUES (?, ?, ?, ?, ?)"
+    ).run(
+      id,
+      req.userId!,
+      name,
+      date || new Date().toISOString().split("T")[0],
+      time || null
+    );
 
-    if (error) throw error;
-
-    res.status(201).json(data);
+    res.status(201).json(getMealWithItems(id, req.userId!));
   } catch (err) {
-    console.error("Create meal error:", err);
+    console.error("Create meal error:", (err as Error).message);
     res.status(500).json({ error: "Failed to create meal" });
   }
 });
@@ -140,24 +157,27 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { name, date, time } = req.body;
 
-    const { data, error } = await supabase
-      .from("meals")
-      .update({ name, date, time })
-      .eq("id", id)
-      .eq("user_id", req.userId!)
-      .select("*, meal_items(*)")
-      .single();
+    const info = db
+      .prepare(
+        `UPDATE meals SET name = @name, date = @date, time = @time
+         WHERE id = @id AND user_id = @user_id`
+      )
+      .run({
+        id,
+        user_id: req.userId!,
+        name: name ?? null,
+        date: date ?? null,
+        time: time ?? null,
+      });
 
-    if (error) throw error;
-
-    if (!data) {
+    if (info.changes === 0) {
       res.status(404).json({ error: "Meal not found" });
       return;
     }
 
-    res.json(data);
+    res.json(getMealWithItems(id, req.userId!));
   } catch (err) {
-    console.error("Update meal error:", err);
+    console.error("Update meal error:", (err as Error).message);
     res.status(500).json({ error: "Failed to update meal" });
   }
 });
@@ -167,22 +187,18 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const { error, count } = await supabase
-      .from("meals")
-      .delete({ count: "exact" })
-      .eq("id", id)
-      .eq("user_id", req.userId!);
+    const info = db
+      .prepare("DELETE FROM meals WHERE id = ? AND user_id = ?")
+      .run(id, req.userId!);
 
-    if (error) throw error;
-
-    if (count === 0) {
+    if (info.changes === 0) {
       res.status(404).json({ error: "Meal not found" });
       return;
     }
 
     res.status(204).send();
   } catch (err) {
-    console.error("Delete meal error:", err);
+    console.error("Delete meal error:", (err as Error).message);
     res.status(500).json({ error: "Failed to delete meal" });
   }
 });
@@ -199,37 +215,34 @@ router.post("/:id/items", async (req: AuthRequest, res: Response) => {
     }
 
     // Verify ownership
-    const { data: meal } = await supabase
-      .from("meals")
-      .select("id")
-      .eq("id", mealId)
-      .eq("user_id", req.userId!)
-      .single();
+    const meal = db
+      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
+      .get(mealId, req.userId!);
 
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });
       return;
     }
 
-    const { data, error } = await supabase
-      .from("meal_items")
-      .insert({
-        meal_id: mealId,
-        name,
-        amount: amount || 100,
-        calories: calories || 0,
-        protein: protein || 0,
-        carbs: carbs || 0,
-        fat: fat || 0,
-      })
-      .select("*")
-      .single();
+    const id = randomUUID();
+    db.prepare(
+      `INSERT INTO meal_items (id, meal_id, name, amount, calories, protein, carbs, fat)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      id,
+      mealId,
+      name,
+      amount || 100,
+      calories || 0,
+      protein || 0,
+      carbs || 0,
+      fat || 0
+    );
 
-    if (error) throw error;
-
+    const data = db.prepare("SELECT * FROM meal_items WHERE id = ?").get(id);
     res.status(201).json(data);
   } catch (err) {
-    console.error("Add food item error:", err);
+    console.error("Add food item error:", (err as Error).message);
     res.status(500).json({ error: "Failed to add food item" });
   }
 });
@@ -241,36 +254,44 @@ router.put("/:id/items/:itemId", async (req: AuthRequest, res: Response) => {
     const { name, amount, calories, protein, carbs, fat } = req.body;
 
     // Verify ownership
-    const { data: meal } = await supabase
-      .from("meals")
-      .select("id")
-      .eq("id", mealId)
-      .eq("user_id", req.userId!)
-      .single();
+    const meal = db
+      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
+      .get(mealId, req.userId!);
 
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });
       return;
     }
 
-    const { data, error } = await supabase
-      .from("meal_items")
-      .update({ name, amount, calories, protein, carbs, fat })
-      .eq("id", itemId)
-      .eq("meal_id", mealId)
-      .select("*")
-      .single();
+    const info = db
+      .prepare(
+        `UPDATE meal_items
+         SET name = @name, amount = @amount, calories = @calories,
+             protein = @protein, carbs = @carbs, fat = @fat
+         WHERE id = @itemId AND meal_id = @mealId`
+      )
+      .run({
+        itemId,
+        mealId,
+        name: name ?? null,
+        amount: amount ?? null,
+        calories: calories ?? null,
+        protein: protein ?? null,
+        carbs: carbs ?? null,
+        fat: fat ?? null,
+      });
 
-    if (error) throw error;
-
-    if (!data) {
+    if (info.changes === 0) {
       res.status(404).json({ error: "Food item not found" });
       return;
     }
 
+    const data = db
+      .prepare("SELECT * FROM meal_items WHERE id = ?")
+      .get(itemId);
     res.json(data);
   } catch (err) {
-    console.error("Update food item error:", err);
+    console.error("Update food item error:", (err as Error).message);
     res.status(500).json({ error: "Failed to update food item" });
   }
 });
@@ -281,34 +302,27 @@ router.delete("/:id/items/:itemId", async (req: AuthRequest, res: Response) => {
     const { id: mealId, itemId } = req.params;
 
     // Verify ownership
-    const { data: meal } = await supabase
-      .from("meals")
-      .select("id")
-      .eq("id", mealId)
-      .eq("user_id", req.userId!)
-      .single();
+    const meal = db
+      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
+      .get(mealId, req.userId!);
 
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });
       return;
     }
 
-    const { error, count } = await supabase
-      .from("meal_items")
-      .delete({ count: "exact" })
-      .eq("id", itemId)
-      .eq("meal_id", mealId);
+    const info = db
+      .prepare("DELETE FROM meal_items WHERE id = ? AND meal_id = ?")
+      .run(itemId, mealId);
 
-    if (error) throw error;
-
-    if (count === 0) {
+    if (info.changes === 0) {
       res.status(404).json({ error: "Food item not found" });
       return;
     }
 
     res.status(204).send();
   } catch (err) {
-    console.error("Delete food item error:", err);
+    console.error("Delete food item error:", (err as Error).message);
     res.status(500).json({ error: "Failed to delete food item" });
   }
 });

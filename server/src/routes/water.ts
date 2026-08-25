@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { AuthRequest, authenticate } from "../middleware/auth.js";
-import { supabase } from "../db.js";
+import { db } from "../db.js";
 
 const router = Router();
 
@@ -10,94 +11,72 @@ router.use(authenticate);
 // GET /api/water?date=YYYY-MM-DD
 router.get("/", async (req: AuthRequest, res: Response) => {
   try {
-    const date = req.query.date || new Date().toISOString().split("T")[0];
+    const date =
+      (req.query.date as string) || new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
-      .from("daily_water")
-      .select("*")
-      .eq("user_id", req.userId!)
-      .eq("date", date)
-      .maybeSingle(); // pode não existir ainda
-
-    if (error) throw error;
+    const data = db
+      .prepare("SELECT * FROM daily_water WHERE user_id = ? AND date = ?")
+      .get(req.userId!, date) as
+      | { goal_ml: number; amount_ml: number }
+      | undefined;
 
     // Se não existe registro para o dia, retornamos um default
     if (!data) {
       // Busca a última meta de água configurada pelo usuário
-      const { data: lastRecord } = await supabase
-        .from("daily_water")
-        .select("goal_ml")
-        .eq("user_id", req.userId!)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const lastRecord = db
+        .prepare(
+          "SELECT goal_ml FROM daily_water WHERE user_id = ? ORDER BY date DESC LIMIT 1"
+        )
+        .get(req.userId!) as { goal_ml: number } | undefined;
 
       return res.json({
         user_id: req.userId,
         date,
         amount_ml: 0,
-        goal_ml: lastRecord ? lastRecord.goal_ml : 2000
+        goal_ml: lastRecord ? lastRecord.goal_ml : 2000,
       });
     }
 
     res.json(data);
   } catch (err) {
-    console.error("Get water error:", err);
+    console.error("Get water error:", (err as Error).message);
     res.status(500).json({ error: "Failed to fetch daily water" });
   }
 });
 
 // POST /api/water
-// Cria ou atualiza o registro do dia (Upsert)
+// Cria ou atualiza o registro do dia (Upsert atômico via UNIQUE(user_id, date))
 router.post("/", async (req: AuthRequest, res: Response) => {
   try {
     const { date, amount_ml, goal_ml } = req.body;
     const targetDate = date || new Date().toISOString().split("T")[0];
 
-    // Verifica se já existe
-    const { data: existing } = await supabase
-      .from("daily_water")
-      .select("id")
-      .eq("user_id", req.userId!)
-      .eq("date", targetDate)
-      .maybeSingle();
+    // New rows fall back to 0 / 2000. On conflict, COALESCE(@param, current)
+    // keeps the existing value when the field is not sent — preserving the
+    // "don't overwrite" semantics of the original select-then-update code.
+    // The named params are shared across the whole statement, so the UPDATE
+    // clause reads the raw (possibly null) value, not the defaulted one.
+    db.prepare(
+      `INSERT INTO daily_water (id, user_id, date, amount_ml, goal_ml)
+       VALUES (@id, @user_id, @date, COALESCE(@amount_ml, 0), COALESCE(@goal_ml, 2000))
+       ON CONFLICT(user_id, date) DO UPDATE SET
+         amount_ml = COALESCE(@amount_ml, daily_water.amount_ml),
+         goal_ml   = COALESCE(@goal_ml, daily_water.goal_ml)`
+    ).run({
+      id: randomUUID(),
+      user_id: req.userId!,
+      date: targetDate,
+      amount_ml: amount_ml ?? null,
+      goal_ml: goal_ml ?? null,
+    });
 
-    let result;
-
-    if (existing) {
-      // Atualiza
-      const { data, error } = await supabase
-        .from("daily_water")
-        .update({
-          amount_ml: amount_ml !== undefined ? amount_ml : undefined,
-          goal_ml: goal_ml !== undefined ? goal_ml : undefined
-        })
-        .eq("id", existing.id)
-        .select("*")
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Cria novo
-      const { data, error } = await supabase
-        .from("daily_water")
-        .insert({
-          user_id: req.userId!,
-          date: targetDate,
-          amount_ml: amount_ml || 0,
-          goal_ml: goal_ml || 2000
-        })
-        .select("*")
-        .single();
-        
-      if (error) throw error;
-      result = data;
-    }
+    const result = db
+      .prepare("SELECT * FROM daily_water WHERE user_id = ? AND date = ?")
+      .get(req.userId!, targetDate);
 
     res.json(result);
   } catch (err) {
-    console.error("Update water error:", err);
+    console.error("Update water error:", (err as Error).message);
     res.status(500).json({ error: "Failed to update daily water" });
   }
 });
