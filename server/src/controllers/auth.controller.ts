@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { supabase } from "../config/supabase.js";
+import { db } from "../config/db.js";
 import { generateToken } from "../libs/token.js";
 
 // POST /api/auth/register
@@ -13,12 +14,12 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const normalizedEmail = String(email).toLowerCase();
+
     // Check if user already exists
-    const { data: existing } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email.toLowerCase())
-      .single();
+    const existing = db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get(normalizedEmail);
 
     if (existing) {
       res.status(409).json({ error: "Email is already registered" });
@@ -27,26 +28,23 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     // Hash password and create user
     const passwordHash = await bcrypt.hash(password, 12);
+    const id = randomUUID();
 
-    const { data: user, error } = await supabase
-      .from("users")
-      .insert({
-        email: email.toLowerCase(),
-        password_hash: passwordHash,
-        name,
-      })
-      .select("id, email, name, created_at")
-      .single();
+    db.prepare(
+      `INSERT INTO users (id, email, password_hash, name)
+       VALUES (?, ?, ?, ?)`
+    ).run(id, normalizedEmail, passwordHash, name);
 
-    if (error) {
-      throw error;
-    }
+    // Never SELECT * on users — return explicit non-sensitive columns only.
+    const user = db
+      .prepare("SELECT id, email, name, created_at FROM users WHERE id = ?")
+      .get(id);
 
-    const token = generateToken(user.id);
+    const token = generateToken(id);
 
     res.status(201).json({ token, user });
   } catch (err) {
-    console.error("Registration error:", err);
+    console.error("Registration error:", (err as Error).message);
     res.status(500).json({ error: "Failed to register user" });
   }
 }
@@ -62,13 +60,21 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     // Find user by email
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("id, email, name, password_hash, created_at")
-      .eq("email", email.toLowerCase())
-      .single();
+    const user = db
+      .prepare(
+        "SELECT id, email, name, password_hash, created_at FROM users WHERE email = ?"
+      )
+      .get(String(email).toLowerCase()) as
+      | {
+          id: string;
+          email: string;
+          name: string;
+          password_hash: string;
+          created_at: string;
+        }
+      | undefined;
 
-    if (error || !user) {
+    if (!user) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
     }
@@ -84,11 +90,11 @@ export async function login(req: Request, res: Response): Promise<void> {
     const token = generateToken(user.id);
 
     // Strip password_hash from response
-    const { password_hash: _, ...safeUser } = user;
+    const { password_hash: _password_hash, ...safeUser } = user;
 
     res.json({ token, user: safeUser });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("Login error:", (err as Error).message);
     res.status(500).json({ error: "Failed to log in" });
   }
 }
