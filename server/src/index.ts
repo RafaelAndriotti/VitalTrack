@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.js";
 import workoutRoutes from "./routes/workouts.js";
 import mealRoutes from "./routes/meals.js";
 import waterRoutes from "./routes/water.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -23,6 +24,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/meals", mealRoutes);
 app.use("/api/water", waterRoutes);
+
+// Central error handler (safety net; per-handler try/catch still owns its responses)
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
