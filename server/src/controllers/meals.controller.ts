@@ -170,9 +170,13 @@ export async function updateMeal(
     const { id } = req.params;
     const { name, date, time } = req.body;
 
+    // Partial update: keep current column value when the client omits a field.
     const info = db
       .prepare(
-        `UPDATE meals SET name = @name, date = @date, time = @time
+        `UPDATE meals
+         SET name = COALESCE(@name, name),
+             date = COALESCE(@date, date),
+             time = COALESCE(@time, time)
          WHERE id = @id AND user_id = @user_id`
       )
       .run({
@@ -285,11 +289,16 @@ export async function updateMealItem(
       return;
     }
 
+    // Partial update: keep current column value when the client omits a field.
     const info = db
       .prepare(
         `UPDATE meal_items
-         SET name = @name, amount = @amount, calories = @calories,
-             protein = @protein, carbs = @carbs, fat = @fat
+         SET name = COALESCE(@name, name),
+             amount = COALESCE(@amount, amount),
+             calories = COALESCE(@calories, calories),
+             protein = COALESCE(@protein, protein),
+             carbs = COALESCE(@carbs, carbs),
+             fat = COALESCE(@fat, fat)
          WHERE id = @itemId AND meal_id = @mealId`
       )
       .run({

@@ -8,48 +8,89 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.name?.charAt(0).toUpperCase() || '?'}
-          </Text>
-        </View>
-        <Text style={styles.name}>{user?.name}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-      </View>
+      {/* Brilhos radiais de fundo, como no hero */}
+      <View pointerEvents="none" style={styles.glowTop} />
 
-      <View style={styles.section}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Membro desde</Text>
-          <Text style={styles.infoValue}>
-            {user?.created_at
-              ? new Date(user.created_at).toLocaleDateString('pt-BR')
-              : '-'}
-          </Text>
+      <View style={styles.content}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.name?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.name}>{user?.name}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
         </View>
-      </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutPressed]}
-        onPress={signOut}
-      >
-        <LogOut size={20} color={Colors.danger} style={{marginRight: Spacing.sm}} />
-        <Text style={styles.logoutText}>Sair da Conta</Text>
-      </Pressable>
+        <View style={styles.section}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Membro desde</Text>
+            <Text style={styles.infoValue}>
+              {user?.created_at
+                ? new Date(user.created_at).toLocaleDateString('pt-BR')
+                : '-'}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutPressed]}
+          onPress={signOut}
+        >
+          <LogOut size={20} color={Colors.danger} style={{ marginRight: Spacing.sm }} />
+          <Text style={styles.logoutText}>Sair da Conta</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
+
+const Glass = {
+  fill: 'rgba(255, 255, 255, 0.05)',
+  fillStrong: 'rgba(255, 255, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+} as const;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -90,
+    width: 320,
+    height: 320,
+    borderRadius: 320,
+    backgroundColor: 'rgba(210, 255, 58, 0.10)',
+  },
+  content: {
+    flex: 1,
     padding: Spacing.lg,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   avatarContainer: {
     alignItems: 'center',
     marginTop: Spacing.xxl,
     marginBottom: Spacing.xxl,
+  },
+  avatarRing: {
+    width: 112,
+    height: 112,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Glass.fill,
+    borderWidth: 1,
+    borderColor: Glass.borderStrong,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
   avatar: {
     width: 96,
@@ -58,11 +99,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.md,
     shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 5},
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowRadius: 12,
     elevation: 5,
   },
   avatarText: {
@@ -82,11 +122,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   section: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Glass.fillStrong,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Glass.border,
     marginBottom: Spacing.xl,
   },
   infoRow: {
@@ -105,9 +145,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
   },
   logoutButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
     borderWidth: 1,
-    borderColor: Colors.danger,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
     borderRadius: BorderRadius.full,
     padding: Spacing.md,
     alignItems: 'center',

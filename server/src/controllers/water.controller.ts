@@ -50,6 +50,21 @@ export async function upsertWater(
     const { date, amount_ml, goal_ml } = req.body;
     const targetDate = date || new Date().toISOString().split("T")[0];
 
+    // goal_ml must be positive — a 0/negative goal persists and later causes
+    // division-by-zero (NaN/Infinity) in the hydration progress bar.
+    if (goal_ml !== undefined && (typeof goal_ml !== "number" || goal_ml <= 0)) {
+      res.status(400).json({ error: "goal_ml must be a positive number" });
+      return;
+    }
+    // amount_ml cannot be negative.
+    if (
+      amount_ml !== undefined &&
+      (typeof amount_ml !== "number" || amount_ml < 0)
+    ) {
+      res.status(400).json({ error: "amount_ml must be a non-negative number" });
+      return;
+    }
+
     // New rows fall back to 0 / 2000. On conflict, COALESCE(@param, current)
     // keeps the existing value when the field is not sent — preserving the
     // "don't overwrite" semantics of the original select-then-update code.

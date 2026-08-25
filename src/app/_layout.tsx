@@ -23,7 +23,7 @@ function InitialLayout() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      router.replace('/(auth)/login');
+      router.replace('/(auth)/welcome');
     } else if (user && (inAuthGroup || segments.length === 0)) {
       router.replace('/(tabs)/workouts');
     }

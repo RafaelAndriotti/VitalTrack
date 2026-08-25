@@ -170,10 +170,15 @@ export async function updateWorkout(
     const { id } = req.params;
     const { name, date, notes, completed } = req.body;
 
+    // Partial update: COALESCE keeps the current column value when the client
+    // omits a field (front sends partial payloads like { completed: true }).
     const info = db
       .prepare(
         `UPDATE workouts
-         SET name = @name, date = @date, notes = @notes, completed = @completed
+         SET name = COALESCE(@name, name),
+             date = COALESCE(@date, date),
+             notes = COALESCE(@notes, notes),
+             completed = COALESCE(@completed, completed)
          WHERE id = @id AND user_id = @user_id`
       )
       .run({
@@ -182,7 +187,7 @@ export async function updateWorkout(
         name: name ?? null,
         date: date ?? null,
         notes: notes ?? null,
-        completed: completed ? 1 : 0,
+        completed: completed === undefined ? null : completed ? 1 : 0,
       });
 
     if (info.changes === 0) {
@@ -301,7 +306,8 @@ export async function updateExercise(
 
     const info = db
       .prepare(
-        `UPDATE exercises SET name = @name, notes = @notes
+        `UPDATE exercises
+         SET name = COALESCE(@name, name), notes = COALESCE(@notes, notes)
          WHERE id = @exerciseId AND workout_id = @workoutId`
       )
       .run({
@@ -372,10 +378,15 @@ export async function updateSet(req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
+    // Partial update: the front edits one field at a time ({ weight },
+    // { reps }, { completed }). COALESCE preserves the untouched columns.
     const info = db
       .prepare(
         `UPDATE exercise_sets
-         SET weight = @weight, reps = @reps, completed = @completed, order_index = @order_index
+         SET weight = COALESCE(@weight, weight),
+             reps = COALESCE(@reps, reps),
+             completed = COALESCE(@completed, completed),
+             order_index = COALESCE(@order_index, order_index)
          WHERE id = @setId AND exercise_id = @exerciseId`
       )
       .run({
@@ -383,8 +394,8 @@ export async function updateSet(req: AuthRequest, res: Response): Promise<void> 
         exerciseId,
         weight: weight ?? null,
         reps: reps ?? null,
-        completed: completed ? 1 : 0,
-        order_index: order_index ?? 0,
+        completed: completed === undefined ? null : completed ? 1 : 0,
+        order_index: order_index ?? null,
       });
 
     if (info.changes === 0) {

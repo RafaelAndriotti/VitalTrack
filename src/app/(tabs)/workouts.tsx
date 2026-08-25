@@ -558,7 +558,7 @@ export default function WorkoutsScreen() {
                     <View>
                       <Text style={styles.historyTitle}>{workout.name}</Text>
                       <Text style={styles.historyDate}>
-                        {new Date(workout.date).toLocaleDateString('pt-BR')}
+                        {new Date(workout.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </Text>
                     </View>
                     <Pressable
@@ -589,46 +589,53 @@ export default function WorkoutsScreen() {
   );
 }
 
+const Glass = {
+  fill: 'rgba(255, 255, 255, 0.05)',
+  fillStrong: 'rgba(255, 255, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+} as const;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { padding: Spacing.md, paddingBottom: Spacing.xxl, maxWidth: 600, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  errorText: { color: Colors.danger, textAlign: 'center', marginBottom: Spacing.md, backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: Spacing.sm, borderRadius: BorderRadius.md, fontFamily: 'Poppins_500Medium' },
+  errorText: { color: Colors.danger, textAlign: 'center', marginBottom: Spacing.md, backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.35)', padding: Spacing.sm, borderRadius: BorderRadius.md, fontFamily: 'Poppins_500Medium' },
   headerTitle: { fontSize: FontSize.xxl, fontFamily: 'Poppins_700Bold', color: Colors.text, marginBottom: Spacing.lg },
-  
+
   activeContainer: { gap: Spacing.md },
-  activeHeader: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, shadowColor: '#000', shadowOffset: {width: 0, height: 10}, shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
+  activeHeader: { backgroundColor: Glass.fillStrong, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Glass.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 8 },
   activeHeaderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
   activeTag: { fontSize: FontSize.xs, color: Colors.primary, textTransform: 'uppercase', fontFamily: 'Poppins_700Bold', marginBottom: 2, letterSpacing: 1 },
   activeTitle: { fontSize: FontSize.xl, fontFamily: 'Poppins_700Bold', color: Colors.text },
   editIconBtn: { padding: Spacing.xs, opacity: 0.7 },
   editWorkoutContainer: { flexDirection: 'row', flex: 1, alignItems: 'center', gap: Spacing.sm },
-  editWorkoutInput: { flex: 1, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.primary, borderRadius: BorderRadius.full, padding: Spacing.sm, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
+  editWorkoutInput: { flex: 1, backgroundColor: Glass.fillStrong, borderWidth: 1, borderColor: Colors.primary, borderRadius: BorderRadius.full, padding: Spacing.sm, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
   headerActions: { flexDirection: 'row', gap: Spacing.sm },
-  actionIcon: { width: 44, height: 44, borderRadius: BorderRadius.full, justifyContent: 'center', alignItems: 'center' },
-  dangerAction: { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
-  successAction: { backgroundColor: Colors.primary },
+  actionIcon: { width: 44, height: 44, borderRadius: BorderRadius.full, justifyContent: 'center', alignItems: 'center', backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border },
+  dangerAction: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.35)' },
+  successAction: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   actionIconText: { color: Colors.text, fontSize: 18 },
-  
-  exerciseCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm, shadowColor: '#000', shadowOffset: {width: 0, height: 5}, shadowOpacity: 0.2, shadowRadius: 10, elevation: 3 },
+
+  exerciseCard: { backgroundColor: Glass.fill, borderRadius: BorderRadius.xl, padding: Spacing.md, borderWidth: 1, borderColor: Glass.border, gap: Spacing.sm, shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.3, shadowRadius: 16, elevation: 4 },
   exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.xs },
   exerciseName: { fontSize: FontSize.lg, fontFamily: 'Poppins_600SemiBold', color: Colors.text },
   exerciseMax: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2, fontFamily: 'Poppins_400Regular' },
   deleteText: { fontSize: 20, color: Colors.textMuted, padding: Spacing.xs },
   
-  setsTableHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs, borderBottomWidth: 1, borderBottomColor: Colors.surfaceLight },
+  setsTableHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs, borderBottomWidth: 1, borderBottomColor: Glass.border },
   columnHeader: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.textSecondary, letterSpacing: 1 },
   setRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs },
   setText: { fontSize: FontSize.md, color: Colors.text, fontFamily: 'Poppins_600SemiBold' },
-  setInput: { backgroundColor: Colors.background, borderColor: Colors.border, borderWidth: 1, borderRadius: BorderRadius.md, color: Colors.text, textAlign: 'center', width: 64, height: 36, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
+  setInput: { backgroundColor: Glass.fill, borderColor: Glass.border, borderWidth: 1, borderRadius: BorderRadius.md, color: Colors.text, textAlign: 'center', width: 64, height: 36, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
   setActions: { width: '15%', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: Spacing.xs },
-  
+
   checkButton: { width: 28, height: 28, borderRadius: BorderRadius.sm, borderWidth: 2, borderColor: Colors.textMuted, justifyContent: 'center', alignItems: 'center' },
   checkButtonActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   checkText: { color: Colors.textInverted, fontSize: 14, fontFamily: 'Poppins_900Black' },
   deleteSetBtn: { opacity: 0.7, padding: 4 },
-  
-  addSetButton: { alignItems: 'center', paddingVertical: Spacing.sm, backgroundColor: Colors.surfaceLight, borderRadius: BorderRadius.full, marginTop: Spacing.sm },
+
+  addSetButton: { alignItems: 'center', paddingVertical: Spacing.sm, backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.full, marginTop: Spacing.sm },
   addSetText: { fontSize: FontSize.sm, color: Colors.text, fontFamily: 'Poppins_600SemiBold' },
   addExerciseButton: { alignItems: 'center', paddingVertical: Spacing.md, borderWidth: 1, borderStyle: 'dashed', borderColor: Colors.primary, borderRadius: BorderRadius.xl, backgroundColor: 'rgba(210, 255, 58, 0.05)', marginVertical: Spacing.sm },
   addExerciseText: { fontSize: FontSize.sm, color: Colors.primary, fontFamily: 'Poppins_600SemiBold' },
@@ -643,12 +650,12 @@ const styles = StyleSheet.create({
   startWorkoutTextTitle: { fontSize: FontSize.lg, fontFamily: 'Poppins_700Bold', color: Colors.textInverted, textTransform: 'uppercase', letterSpacing: 1 },
   startWorkoutTextSubtitle: { fontSize: FontSize.sm, color: Colors.textInverted, textAlign: 'center', fontFamily: 'Poppins_500Medium', opacity: 0.8 },
   
-  newWorkoutCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.primary, gap: Spacing.md },
+  newWorkoutCard: { backgroundColor: Glass.fillStrong, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.primary, gap: Spacing.md },
   cardSectionTitle: { fontSize: FontSize.md, fontFamily: 'Poppins_600SemiBold', color: Colors.text, marginBottom: Spacing.sm },
-  newWorkoutInput: { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
-  
-  inlineInputCard: { backgroundColor: Colors.background, borderRadius: BorderRadius.xl, padding: Spacing.md, gap: Spacing.md, marginTop: Spacing.sm },
-  inlineInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
+  newWorkoutInput: { backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
+
+  inlineInputCard: { backgroundColor: Glass.fill, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Glass.border, padding: Spacing.md, gap: Spacing.md, marginTop: Spacing.sm },
+  inlineInput: { backgroundColor: Glass.fillStrong, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
   inlineInputActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md },
   inlineBtnCancel: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md },
   inlineBtnCancelText: { color: Colors.textSecondary, fontSize: FontSize.sm, fontFamily: 'Poppins_600SemiBold' },
@@ -659,20 +666,20 @@ const styles = StyleSheet.create({
   emptyHistory: { padding: Spacing.xl, alignItems: 'center' },
   emptyHistoryText: { color: Colors.textMuted, fontSize: FontSize.sm, fontFamily: 'Poppins_400Regular' },
   
-  historyCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.sm },
+  historyCard: { backgroundColor: Glass.fill, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Glass.border, marginBottom: Spacing.sm },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   historyTitle: { fontSize: FontSize.lg, fontFamily: 'Poppins_600SemiBold', color: Colors.text },
   historyDate: { fontSize: FontSize.xs, color: Colors.textMuted, fontFamily: 'Poppins_500Medium' },
-  reopenBtn: { backgroundColor: 'rgba(210, 255, 58, 0.1)', borderWidth: 1, borderColor: Colors.primary, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 6 },
+  reopenBtn: { backgroundColor: 'rgba(210, 255, 58, 0.10)', borderWidth: 1, borderColor: Colors.primary, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 6 },
   reopenBtnText: { color: Colors.primary, fontSize: FontSize.xs, fontFamily: 'Poppins_700Bold', textTransform: 'uppercase' },
   historySub: { fontSize: FontSize.sm, color: Colors.primary, marginBottom: Spacing.sm, fontFamily: 'Poppins_600SemiBold' },
-  historyExercises: { borderTopWidth: 1, borderTopColor: Colors.surfaceLight, paddingTop: Spacing.sm, gap: 4 },
+  historyExercises: { borderTopWidth: 1, borderTopColor: Glass.border, paddingTop: Spacing.sm, gap: 4 },
   historyExerciseItem: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: 'Poppins_400Regular' },
-  
+
   // LIBRARY
-  libraryCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, marginVertical: Spacing.sm },
+  libraryCard: { backgroundColor: Glass.fillStrong, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Glass.border, marginVertical: Spacing.sm },
   libraryList: { maxHeight: 300, marginVertical: Spacing.sm },
-  libraryItem: { padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.surfaceLight, backgroundColor: Colors.background, borderRadius: BorderRadius.lg, marginBottom: 8 },
+  libraryItem: { padding: Spacing.md, borderWidth: 1, borderColor: Glass.border, backgroundColor: Glass.fill, borderRadius: BorderRadius.lg, marginBottom: 8 },
   libraryItemText: { color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_600SemiBold' },
   libraryItemSub: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2, fontFamily: 'Poppins_400Regular' },
   textMuted: { color: Colors.textMuted, fontSize: FontSize.sm, textAlign: 'center', marginVertical: Spacing.md, fontFamily: 'Poppins_400Regular' },

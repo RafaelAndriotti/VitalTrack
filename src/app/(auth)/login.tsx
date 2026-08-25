@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Link, router } from 'expo-router';
-import { Dumbbell } from 'lucide-react-native';
+import { Dumbbell, Star, ArrowRight } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+
+/* Cores de vidro (glassmorphism), iguais às do welcome.tsx. */
+const Glass = {
+  fill: 'rgba(255, 255, 255, 0.05)',
+  fillStrong: 'rgba(255, 255, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+} as const;
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -11,6 +19,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -36,57 +45,78 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Dumbbell size={64} color={Colors.primary} style={styles.logo} />
-          <Text style={styles.title}>VitalTrack</Text>
-          <Text style={styles.subtitle}>Controle seus treinos e dieta</Text>
-        </View>
+      {/* Brilhos radiais de fundo, como no hero */}
+      <View pointerEvents="none" style={styles.glowTop} />
+      <View pointerEvents="none" style={styles.glowBottom} />
 
-        <View style={styles.form}>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <View style={styles.logoBadge}>
+              <Dumbbell size={40} color={Colors.primary} />
+            </View>
+            <Text style={styles.title}>VitalTrack</Text>
+            <View style={styles.badge}>
+              <Star size={13} color={Colors.primary} fill={Colors.primary} />
+              <Text style={styles.badgeText}>Controle seus treinos e dieta</Text>
+            </View>
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="E-mail"
-            placeholderTextColor={Colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          <View style={styles.form}>
+            {error ? (
+              <Text style={styles.error} accessibilityRole="alert">{error}</Text>
+            ) : null}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor={Colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+            <TextInput
+              style={[styles.input, focusedField === 'email' && styles.inputFocused]}
+              placeholder="E-mail"
+              placeholderTextColor={Colors.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-          <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.textInverted || '#09090B'} />
-            ) : (
-              <Text style={styles.buttonText}>Entrar</Text>
-            )}
-          </Pressable>
+            <TextInput
+              style={[styles.input, focusedField === 'password' && styles.inputFocused]}
+              placeholder="Senha"
+              placeholderTextColor={Colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
+              secureTextEntry
+            />
 
-          <Link href="/(auth)/register" asChild>
-            <Pressable style={styles.link}>
-              <Text style={styles.linkText}>
-                Não tem conta? <Text style={styles.linkHighlight}>Criar conta</Text>
-              </Text>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.textInverted} />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Entrar</Text>
+                  <ArrowRight size={18} color={Colors.textInverted} />
+                </>
+              )}
             </Pressable>
-          </Link>
+
+            <Link href="/(auth)/register" asChild>
+              <Pressable accessibilityRole="button" style={styles.link}>
+                <Text style={styles.linkText}>
+                  Não tem conta? <Text style={styles.linkHighlight}>Criar conta</Text>
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -96,10 +126,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -120,
+    left: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 320,
+    backgroundColor: 'rgba(210, 255, 58, 0.10)',
+  },
+  glowBottom: {
+    position: 'absolute',
+    bottom: -140,
+    right: -100,
+    width: 340,
+    height: 340,
+    borderRadius: 340,
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+  },
   content: {
-    flex: 1,
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xxl,
     maxWidth: 400,
     width: '100%',
     alignSelf: 'center',
@@ -107,21 +159,41 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: Spacing.xxl,
+    gap: Spacing.sm,
   },
-  logo: {
-    marginBottom: Spacing.md,
+  logoBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: 'rgba(210, 255, 58, 0.10)',
+    borderWidth: 1,
+    borderColor: Glass.borderStrong,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   title: {
     fontSize: 32,
     fontFamily: 'Poppins_900Black',
     color: Colors.text,
-    marginBottom: Spacing.xs,
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: FontSize.md,
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Glass.fill,
+    borderWidth: 1,
+    borderColor: Glass.border,
+    borderRadius: BorderRadius.full,
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+  },
+  badgeText: {
+    fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Poppins_600SemiBold',
+    letterSpacing: 0.3,
   },
   form: {
     gap: Spacing.md,
@@ -130,15 +202,17 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontSize: FontSize.sm,
     textAlign: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.35)',
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     fontFamily: 'Poppins_500Medium',
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Glass.fill,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Glass.border,
     borderRadius: BorderRadius.full,
     padding: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -146,23 +220,30 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontFamily: 'Poppins_500Medium',
   },
+  inputFocused: {
+    borderColor: Colors.primary,
+    backgroundColor: Glass.fillStrong,
+  },
   button: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.sm,
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.full,
     padding: Spacing.md,
-    alignItems: 'center',
     marginTop: Spacing.md,
     shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 5,
   },
   buttonPressed: {
     opacity: 0.8,
   },
   buttonText: {
-    color: Colors.textInverted || '#09090B',
+    color: Colors.textInverted,
     fontSize: FontSize.md,
     fontFamily: 'Poppins_700Bold',
     textTransform: 'uppercase',

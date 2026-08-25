@@ -88,7 +88,7 @@ export default function DietScreen() {
       await mealsApi.create({
         name: newMealName.trim(),
         date: selectedDate,
-        time: newMealTime.trim() || null,
+        time: newMealTime.trim() || undefined,
       });
       setNewMealName('');
       setNewMealTime('');
@@ -212,8 +212,8 @@ export default function DietScreen() {
   async function handleUpdateWaterGoal(goalStr: string) {
     if (!dailyWater) return;
     const num = parseInt(goalStr);
-    if (isNaN(num)) return;
-    
+    if (isNaN(num) || num <= 0) return; // meta 0 causa divisão por zero na barra
+
     try {
       setDailyWater({ ...dailyWater, goal_ml: num });
       await waterApi.update({ date: selectedDate, goal_ml: num });
@@ -341,13 +341,13 @@ export default function DietScreen() {
 
             <View style={styles.waterBody}>
               <Text style={styles.waterAmount}>{dailyWater.amount_ml} ml</Text>
-              <Text style={styles.waterSubtitle}>{(dailyWater.amount_ml / dailyWater.goal_ml * 100).toFixed(0)}% da meta alcançada</Text>
+              <Text style={styles.waterSubtitle}>{(dailyWater.goal_ml > 0 ? dailyWater.amount_ml / dailyWater.goal_ml * 100 : 0).toFixed(0)}% da meta alcançada</Text>
               
               <View style={styles.progressBarBg}>
                 <View
                   style={[
                     styles.progressBarFill,
-                    { backgroundColor: '#3B82F6', width: `${Math.min((dailyWater.amount_ml / dailyWater.goal_ml) * 100, 100)}%` }
+                    { backgroundColor: '#3B82F6', width: `${dailyWater.goal_ml > 0 ? Math.min((dailyWater.amount_ml / dailyWater.goal_ml) * 100, 100) : 0}%` }
                   ]}
                 />
               </View>
@@ -664,75 +664,82 @@ export default function DietScreen() {
   );
 }
 
+const Glass = {
+  fill: 'rgba(255, 255, 255, 0.05)',
+  fillStrong: 'rgba(255, 255, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+} as const;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { padding: Spacing.md, paddingBottom: Spacing.xxl, maxWidth: 600, width: '100%', alignSelf: 'center', gap: Spacing.md },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  errorText: { color: Colors.danger, textAlign: 'center', marginBottom: Spacing.md, backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: Spacing.sm, borderRadius: BorderRadius.md, fontFamily: 'Poppins_500Medium' },
-  
-  summaryCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl, borderWidth: 1, borderColor: Colors.border, gap: Spacing.md, shadowColor: '#000', shadowOffset: {width: 0, height: 10}, shadowOpacity: 0.3, shadowRadius: 15, elevation: 5 },
+  errorText: { color: Colors.danger, textAlign: 'center', marginBottom: Spacing.md, backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.35)', padding: Spacing.sm, borderRadius: BorderRadius.md, fontFamily: 'Poppins_500Medium' },
+
+  summaryCard: { backgroundColor: Glass.fillStrong, borderRadius: BorderRadius.xl, padding: Spacing.xl, borderWidth: 1, borderColor: Glass.border, gap: Spacing.md, shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 8 },
   calorieRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   calorieTitle: { fontSize: FontSize.xxl, fontFamily: 'Poppins_900Black', color: Colors.text },
   calorieSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: -4, fontFamily: 'Poppins_500Medium' },
-  progressBarBg: { height: 16, backgroundColor: Colors.surfaceLight, borderRadius: BorderRadius.full, overflow: 'hidden', marginVertical: Spacing.xs },
+  progressBarBg: { height: 16, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: BorderRadius.full, overflow: 'hidden', marginVertical: Spacing.xs },
   progressBarFill: { height: '100%', backgroundColor: Colors.primary },
   macrosRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs },
   macroCol: { flex: 1, gap: Spacing.xs },
   macroInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   macroGram: { fontSize: FontSize.md, fontFamily: 'Poppins_700Bold', color: Colors.text },
   macroLabel: { fontSize: FontSize.xs, color: Colors.textMuted, fontFamily: 'Poppins_600SemiBold', textTransform: 'uppercase' },
-  macroBarBg: { height: 8, backgroundColor: Colors.surfaceLight, borderRadius: BorderRadius.full, overflow: 'hidden' },
+  macroBarBg: { height: 8, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: BorderRadius.full, overflow: 'hidden' },
   macroBarFill: { height: '100%' },
-  
-  // Water
-  waterCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: '#06b6d4', gap: Spacing.md, shadowColor: '#06b6d4', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
+
+  // Water (mantém acento ciano/azul)
+  waterCard: { backgroundColor: Glass.fillStrong, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: 'rgba(6, 182, 212, 0.45)', gap: Spacing.md, shadowColor: '#06b6d4', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.15, shadowRadius: 18, elevation: 4 },
   waterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   waterTitle: { fontSize: FontSize.lg, fontFamily: 'Poppins_700Bold', color: Colors.text },
   waterGoalRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   waterGoalLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: 'Poppins_500Medium' },
-  waterGoalInput: { backgroundColor: Colors.background, color: Colors.text, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, paddingVertical: 2, minWidth: 50, textAlign: 'center', fontSize: FontSize.sm, fontFamily: 'Poppins_600SemiBold' },
+  waterGoalInput: { backgroundColor: Glass.fill, color: Colors.text, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, paddingVertical: 2, minWidth: 50, textAlign: 'center', fontSize: FontSize.sm, fontFamily: 'Poppins_600SemiBold' },
   waterBody: { gap: Spacing.sm },
   waterAmount: { fontSize: 32, fontFamily: 'Poppins_900Black', color: '#06b6d4', textAlign: 'center' },
   waterSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', fontFamily: 'Poppins_500Medium', marginTop: -4 },
   waterActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center', marginTop: Spacing.sm },
-  waterBtn: { backgroundColor: 'rgba(6, 182, 212, 0.1)', borderWidth: 1, borderColor: '#06b6d4', borderRadius: BorderRadius.full, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
+  waterBtn: { backgroundColor: 'rgba(6, 182, 212, 0.12)', borderWidth: 1, borderColor: '#06b6d4', borderRadius: BorderRadius.full, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
   waterBtnText: { color: '#06b6d4', fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.sm },
-  waterBtnRed: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: Colors.danger, borderRadius: BorderRadius.full, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
+  waterBtnRed: { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: Colors.danger, borderRadius: BorderRadius.full, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
   waterBtnTextRed: { color: Colors.danger, fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.sm },
   customWaterRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xs },
-  customWaterInput: { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, height: 40, width: 140, color: Colors.text, textAlign: 'center', fontSize: FontSize.sm, fontFamily: 'Poppins_500Medium' },
- 
+  customWaterInput: { backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, height: 40, width: 140, color: Colors.text, textAlign: 'center', fontSize: FontSize.sm, fontFamily: 'Poppins_500Medium' },
+
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md },
   sectionTitle: { fontSize: FontSize.lg, fontFamily: 'Poppins_700Bold', color: Colors.text },
-  addMealBtn: { backgroundColor: 'rgba(210, 255, 58, 0.1)', paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.primary },
+  addMealBtn: { backgroundColor: 'rgba(210, 255, 58, 0.10)', paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.primary },
   addMealBtnText: { color: Colors.primary, fontSize: FontSize.sm, fontFamily: 'Poppins_700Bold', textTransform: 'uppercase' },
   emptyHistory: { padding: Spacing.xl, alignItems: 'center' },
   emptyHistoryText: { color: Colors.textMuted, fontSize: FontSize.sm, fontFamily: 'Poppins_500Medium' },
- 
-  mealCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.xs },
+
+  mealCard: { backgroundColor: Glass.fill, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Glass.border, marginBottom: Spacing.xs },
   mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   mealTitle: { fontSize: FontSize.lg, fontFamily: 'Poppins_700Bold', color: Colors.text },
   mealSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2, fontFamily: 'Poppins_500Medium' },
-  addFoodBtn: { backgroundColor: Colors.surfaceLight, borderColor: Colors.border, borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  addFoodBtn: { backgroundColor: Glass.fillStrong, borderColor: Glass.borderStrong, borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   addFoodBtnText: { fontSize: FontSize.sm, color: Colors.text, fontFamily: 'Poppins_600SemiBold' },
   deleteMealBtn: { justifyContent: 'center', alignItems: 'center', padding: Spacing.xs, opacity: 0.6 },
-  foodList: { borderTopWidth: 1, borderTopColor: Colors.surfaceLight, paddingTop: Spacing.md, marginTop: Spacing.xs, gap: Spacing.sm },
+  foodList: { borderTopWidth: 1, borderTopColor: Glass.border, paddingTop: Spacing.md, marginTop: Spacing.xs, gap: Spacing.sm },
   foodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
   foodName: { fontSize: FontSize.md, color: Colors.text, fontFamily: 'Poppins_600SemiBold' },
   foodMacros: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2, fontFamily: 'Poppins_500Medium' },
   foodRowRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   foodKcal: { fontSize: FontSize.md, color: Colors.primary, fontFamily: 'Poppins_700Bold' },
   deleteFoodIcon: { fontSize: 18, color: Colors.danger },
-  
+
   // MODAL STYLING
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalOverlayCenter: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { backgroundColor: Colors.background, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.border, maxHeight: '90%', padding: Spacing.lg, paddingBottom: Spacing.xxl },
+  modalContainer: { backgroundColor: Colors.background, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, borderWidth: 1, borderColor: Glass.borderStrong, maxHeight: '90%', padding: Spacing.lg, paddingBottom: Spacing.xxl },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
   modalTitle: { fontSize: FontSize.xl, fontFamily: 'Poppins_700Bold', color: Colors.text },
   closeModalBtn: { padding: Spacing.xs },
   closeModalBtnText: { fontSize: FontSize.xl, color: Colors.textSecondary, fontFamily: 'Poppins_400Regular' },
-  modalTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
+  modalTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Glass.border, marginBottom: Spacing.lg },
   modalTab: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center' },
   modalTabActive: { borderBottomWidth: 3, borderBottomColor: Colors.primary },
   modalTabText: { fontSize: FontSize.md, color: Colors.textMuted, fontFamily: 'Poppins_600SemiBold' },
@@ -742,17 +749,19 @@ const styles = StyleSheet.create({
   formLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: 'Poppins_600SemiBold' },
   formValue: { fontSize: FontSize.md, color: Colors.text, fontFamily: 'Poppins_700Bold' },
   amountInputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  amountInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, width: 80, height: 44, color: Colors.text, textAlign: 'center', fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md },
+  amountInput: { backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.md, width: 80, height: 44, color: Colors.text, textAlign: 'center', fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md },
   amountUnit: { color: Colors.textSecondary, fontSize: FontSize.sm, fontFamily: 'Poppins_500Medium' },
   formField: { marginBottom: Spacing.md },
-  formInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
+  formInput: { backgroundColor: Glass.fill, borderWidth: 1, borderColor: Glass.border, borderRadius: BorderRadius.full, padding: Spacing.md, paddingHorizontal: Spacing.lg, color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_500Medium' },
   formGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   gridField: { width: '47%', gap: Spacing.xs },
   gridLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: 'Poppins_500Medium' },
-  submitBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.full, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.sm, shadowColor: Colors.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  submitBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.full, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.sm, shadowColor: Colors.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 12, elevation: 5 },
   submitBtnText: { color: Colors.textInverted, fontSize: FontSize.md, fontFamily: 'Poppins_700Bold', textTransform: 'uppercase', letterSpacing: 1 },
- 
-  libraryItem: { padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.surfaceLight, backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, marginBottom: Spacing.sm },
+
+  libraryItem: { padding: Spacing.md, borderWidth: 1, borderColor: Glass.border, backgroundColor: Glass.fill, borderRadius: BorderRadius.lg, marginBottom: Spacing.sm },
   libraryItemText: { color: Colors.text, fontSize: FontSize.md, fontFamily: 'Poppins_600SemiBold' },
   libraryItemSub: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 4, fontFamily: 'Poppins_400Regular' },
+  // Estilo antes ausente (usado no fallback de biblioteca vazia).
+  textMuted: { color: Colors.textMuted, fontSize: FontSize.sm, textAlign: 'center', marginVertical: Spacing.md, fontFamily: 'Poppins_400Regular' },
 });
