@@ -15,6 +15,9 @@ const setsByExercise = db.prepare(
 // SQLite 0/1 integers back to booleans the front-end expects.
 function hydrateWorkout(workout: Record<string, any>) {
   workout.completed = !!workout.completed;
+  workout.muscle_groups = workout.muscle_groups
+    ? String(workout.muscle_groups).split(",").filter(Boolean)
+    : [];
   workout.exercises = exercisesByWorkout.all(workout.id).map((ex: any) => {
     ex.exercise_sets = setsByExercise
       .all(ex.id)
@@ -135,7 +138,7 @@ export async function createWorkout(
   res: Response
 ): Promise<void> {
   try {
-    const { name, date, notes, completed } = req.body;
+    const { name, date, notes, completed, muscle_groups } = req.body;
 
     if (!name) {
       res.status(400).json({ error: "Workout name is required" });
@@ -144,14 +147,15 @@ export async function createWorkout(
 
     const id = randomUUID();
     db.prepare(
-      "INSERT INTO workouts (id, user_id, name, date, completed, notes) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workouts (id, user_id, name, date, completed, notes, muscle_groups) VALUES (?, ?, ?, ?, ?, ?, ?)"
     ).run(
       id,
       req.userId!,
       name,
       date || new Date().toISOString().split("T")[0],
       completed ? 1 : 0,
-      notes || null
+      notes || null,
+      Array.isArray(muscle_groups) ? muscle_groups.join(",") : muscle_groups || null
     );
 
     res.status(201).json(getWorkout(id, req.userId!));
@@ -168,7 +172,7 @@ export async function updateWorkout(
 ): Promise<void> {
   try {
     const { id } = req.params;
-    const { name, date, notes, completed } = req.body;
+    const { name, date, notes, completed, muscle_groups } = req.body;
 
     // Partial update: COALESCE keeps the current column value when the client
     // omits a field (front sends partial payloads like { completed: true }).
@@ -178,7 +182,8 @@ export async function updateWorkout(
          SET name = COALESCE(@name, name),
              date = COALESCE(@date, date),
              notes = COALESCE(@notes, notes),
-             completed = COALESCE(@completed, completed)
+             completed = COALESCE(@completed, completed),
+             muscle_groups = COALESCE(@muscle_groups, muscle_groups)
          WHERE id = @id AND user_id = @user_id`
       )
       .run({
@@ -188,6 +193,9 @@ export async function updateWorkout(
         date: date ?? null,
         notes: notes ?? null,
         completed: completed === undefined ? null : completed ? 1 : 0,
+        muscle_groups: Array.isArray(muscle_groups)
+          ? muscle_groups.join(",")
+          : muscle_groups ?? null,
       });
 
     if (info.changes === 0) {

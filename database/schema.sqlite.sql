@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS workouts (
   date       TEXT NOT NULL DEFAULT (date('now')),
   completed  INTEGER NOT NULL DEFAULT 0 CHECK(completed IN (0,1)),
   notes      TEXT,
+  muscle_groups TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -150,12 +151,140 @@ CREATE TRIGGER IF NOT EXISTS trg_daily_water_updated_at AFTER UPDATE ON daily_wa
 BEGIN UPDATE daily_water SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = OLD.id; END;
 
 -- Global exercise seeds (user_id NULL). Deduped by unique partial index above.
+-- Wipe globals first so renamed/regrouped entries from older versions do not
+-- linger (only user_id IS NULL rows; user-created exercises are untouched).
+-- Muscle groups MUST match MUSCLE_GROUPS in src/app/(tabs)/workouts.tsx exactly,
+-- or the exercise vanishes from the "Exercícios" tab.
+DELETE FROM exercise_library WHERE user_id IS NULL;
 INSERT OR IGNORE INTO exercise_library (id, user_id, name, muscle_group) VALUES
-  (lower(hex(randomblob(16))), NULL, 'Supino Reto', 'Peito'),
-  (lower(hex(randomblob(16))), NULL, 'Agachamento Livre', 'Pernas'),
-  (lower(hex(randomblob(16))), NULL, 'Levantamento Terra', 'Costas'),
-  (lower(hex(randomblob(16))), NULL, 'Rosca Direta', 'Bíceps'),
-  (lower(hex(randomblob(16))), NULL, 'Desenvolvimento com Halteres', 'Ombros');
+  -- Peito
+  (lower(hex(randomblob(16))), NULL, 'Supino reto com barra', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Supino inclinado com barra', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Supino declinado com barra', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Supino reto com halteres', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Supino inclinado com halteres', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Crucifixo reto com halteres', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Crucifixo inclinado com halteres', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Crossover (polia alta)', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Crossover (polia baixa)', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Peck deck (voador)', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Flexão de braço', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Flexão de braço com pés elevados', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Mergulho em paralelas (inclinado à frente)', 'Peito'),
+  (lower(hex(randomblob(16))), NULL, 'Pullover com halter', 'Peito'),
+  -- Costas
+  (lower(hex(randomblob(16))), NULL, 'Barra fixa (pronada)', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Barra fixa supinada', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Puxada frontal na polia', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Puxada supinada na polia', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Puxada com pegada neutra', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada curvada com barra', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada curvada com halteres', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada unilateral com halter (serrote)', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada baixa na polia (triângulo)', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada cavalinho (T-bar row)', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Remada máquina', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Pullover na polia alta', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Levantamento terra', 'Costas'),
+  (lower(hex(randomblob(16))), NULL, 'Hiperextensão lombar (banco romano)', 'Costas'),
+  -- Ombros (Deltoides)
+  (lower(hex(randomblob(16))), NULL, 'Desenvolvimento militar com barra', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Desenvolvimento com halteres', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Desenvolvimento Arnold', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Desenvolvimento máquina', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação lateral com halteres', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação lateral na polia', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação frontal com halteres', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação frontal com barra/anilha', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Crucifixo inverso com halteres', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Crucifixo inverso no peck deck', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Face pull na polia', 'Ombros'),
+  (lower(hex(randomblob(16))), NULL, 'Remada alta', 'Ombros'),
+  -- Trapézio
+  (lower(hex(randomblob(16))), NULL, 'Encolhimento com halteres', 'Trapézio'),
+  (lower(hex(randomblob(16))), NULL, 'Encolhimento com barra', 'Trapézio'),
+  (lower(hex(randomblob(16))), NULL, 'Encolhimento na máquina/Smith', 'Trapézio'),
+  (lower(hex(randomblob(16))), NULL, 'Remada alta com barra', 'Trapézio'),
+  -- Bíceps
+  (lower(hex(randomblob(16))), NULL, 'Rosca direta com barra', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca direta com barra W', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca alternada com halteres', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca martelo', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca concentrada', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca Scott (banco inclinado)', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca inclinada com halteres', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca na polia baixa', 'Bíceps'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca 21', 'Bíceps'),
+  -- Tríceps
+  (lower(hex(randomblob(16))), NULL, 'Tríceps pulley (barra reta)', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps corda', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps testa com barra W', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps francês com halter', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps coice (kickback)', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps banco (bench dips)', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Mergulho em paralelas (tronco ereto)', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Supino fechado', 'Tríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Tríceps máquina', 'Tríceps'),
+  -- Antebraço
+  (lower(hex(randomblob(16))), NULL, 'Rosca punho com barra', 'Antebraço'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca punho invertida', 'Antebraço'),
+  (lower(hex(randomblob(16))), NULL, 'Rosca inversa com barra', 'Antebraço'),
+  (lower(hex(randomblob(16))), NULL, 'Farmer''s walk (caminhada do fazendeiro)', 'Antebraço'),
+  (lower(hex(randomblob(16))), NULL, 'Pegada com rolo/gripper', 'Antebraço'),
+  -- Quadríceps
+  (lower(hex(randomblob(16))), NULL, 'Agachamento livre', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Agachamento frontal', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Agachamento no Smith', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Agachamento búlgaro', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Hack squat', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Leg press 45°', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Cadeira extensora', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Afundo (lunge)', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Passada (walking lunge)', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Agachamento sumô', 'Quadríceps'),
+  (lower(hex(randomblob(16))), NULL, 'Sissy squat', 'Quadríceps'),
+  -- Posterior de coxa (Isquiotibiais)
+  (lower(hex(randomblob(16))), NULL, 'Mesa flexora', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Cadeira flexora', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Flexora em pé (unilateral)', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Stiff com barra', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Levantamento terra romeno', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Bom dia (good morning)', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Nordic curl', 'Posterior'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação pélvica com ênfase em posterior', 'Posterior'),
+  -- Glúteos
+  (lower(hex(randomblob(16))), NULL, 'Elevação pélvica (hip thrust)', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Ponte de glúteo', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Coice na polia (glute kickback)', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Coice na máquina', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Abdução de quadril na máquina', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Abdução na polia', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Afundo reverso', 'Glúteos'),
+  (lower(hex(randomblob(16))), NULL, 'Subida no banco (step up)', 'Glúteos'),
+  -- Panturrilhas
+  (lower(hex(randomblob(16))), NULL, 'Panturrilha em pé na máquina', 'Panturrilha'),
+  (lower(hex(randomblob(16))), NULL, 'Panturrilha sentado na máquina', 'Panturrilha'),
+  (lower(hex(randomblob(16))), NULL, 'Panturrilha no leg press', 'Panturrilha'),
+  (lower(hex(randomblob(16))), NULL, 'Panturrilha com halteres (unilateral)', 'Panturrilha'),
+  (lower(hex(randomblob(16))), NULL, 'Panturrilha no Smith', 'Panturrilha'),
+  -- Abdômen / Core
+  (lower(hex(randomblob(16))), NULL, 'Abdominal supra (crunch)', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Abdominal infra (elevação de pernas)', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Elevação de pernas na barra fixa', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Abdominal na polia (rosca abdominal)', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Prancha isométrica', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Prancha lateral', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Abdominal bicicleta', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Abdominal remador', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Russian twist', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Ab wheel (roda abdominal)', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Mountain climber', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Dead bug', 'Core'),
+  (lower(hex(randomblob(16))), NULL, 'Prancha com elevação de braço/perna', 'Core'),
+  -- Adutores / Abdutores
+  (lower(hex(randomblob(16))), NULL, 'Cadeira adutora', 'Adutores'),
+  (lower(hex(randomblob(16))), NULL, 'Cadeira abdutora', 'Adutores'),
+  (lower(hex(randomblob(16))), NULL, 'Adução na polia', 'Adutores');
 
 -- Global food seeds (user_id NULL)
 INSERT OR IGNORE INTO food_library (id, user_id, name, calories, protein, carbs, fat, serving_size) VALUES

@@ -12,6 +12,7 @@ export interface Workout {
   date: string;
   completed: boolean;
   notes: string | null;
+  muscle_groups: string[];
   created_at: string;
   exercises: Exercise[];
 }

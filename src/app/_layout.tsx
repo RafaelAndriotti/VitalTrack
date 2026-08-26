@@ -1,13 +1,14 @@
 import { Slot, useSegments, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { Colors } from '@/constants/theme';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { Poppins_400Regular } from '@expo-google-fonts/poppins/400Regular';
 import { Poppins_500Medium } from '@expo-google-fonts/poppins/500Medium';
 import { Poppins_600SemiBold } from '@expo-google-fonts/poppins/600SemiBold';
 import { Poppins_700Bold } from '@expo-google-fonts/poppins/700Bold';
-import { Poppins_900Black } from '@expo-google-fonts/poppins/900Black';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent splash screen from hiding until fonts are loaded
@@ -24,8 +25,8 @@ function InitialLayout() {
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/welcome');
-    } else if (user && (inAuthGroup || segments.length === 0)) {
-      router.replace('/(tabs)/workouts');
+    } else if (user && (inAuthGroup || (segments as string[]).length === 0)) {
+      router.replace('/(tabs)/home');
     }
   }, [user, isLoading, segments]);
 
@@ -38,8 +39,12 @@ export default function RootLayout() {
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
-    Poppins_900Black
   });
+
+  // Fundo grafite na janela nativa — mata o flash branco por baixo das cenas.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(Colors.background).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) {

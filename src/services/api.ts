@@ -67,7 +67,7 @@ export const auth = {
 export const workouts = {
   list: () => request<Workout[]>('/workouts'),
 
-  create: (data: { name: string; date?: string; notes?: string; completed?: boolean }) =>
+  create: (data: { name: string; date?: string; notes?: string; completed?: boolean; muscle_groups?: string[] }) =>
     request<Workout>('/workouts', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -84,7 +84,7 @@ export const workouts = {
   deleteLibraryExercise: (id: string) =>
     request<{ message: string }>(`/workouts/library/exercises/${id}`, { method: 'DELETE' }),
 
-  update: (id: string, data: { name?: string; date?: string; notes?: string; completed?: boolean }) =>
+  update: (id: string, data: { name?: string; date?: string; notes?: string; completed?: boolean; muscle_groups?: string[] }) =>
     request<Workout>(`/workouts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

@@ -1,37 +1,47 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { LogOut, CalendarDays, Mail } from 'lucide-react-native';
+import { Colors, Spacing, FontSize, BorderRadius, Font, Elevation, Icon } from '@/constants/theme';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
 
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString('pt-BR')
+    : '-';
+
   return (
     <View style={styles.container}>
-      {/* Brilhos radiais de fundo, como no hero */}
-      <View pointerEvents="none" style={styles.glowTop} />
-
       <View style={styles.content}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.name?.charAt(0).toUpperCase() || '?'}
-              </Text>
-            </View>
+        {/* Identidade */}
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.name?.charAt(0).toUpperCase() || '?'}
+            </Text>
           </View>
-          <Text style={styles.name}>{user?.name}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.name} numberOfLines={1}>{user?.name}</Text>
+            <Text style={styles.email} numberOfLines={1}>{user?.email}</Text>
+          </View>
         </View>
 
-        <View style={styles.section}>
+        {/* Dados da conta */}
+        <View style={styles.card}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Membro desde</Text>
-            <Text style={styles.infoValue}>
-              {user?.created_at
-                ? new Date(user.created_at).toLocaleDateString('pt-BR')
-                : '-'}
-            </Text>
+            <View style={styles.infoLeft}>
+              <CalendarDays size={Icon.md} color={Colors.textSecondary} strokeWidth={Icon.stroke} />
+              <Text style={styles.infoLabel}>Membro desde</Text>
+            </View>
+            <Text style={styles.infoValue}>{memberSince}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <View style={styles.infoLeft}>
+              <Mail size={Icon.md} color={Colors.textSecondary} strokeWidth={Icon.stroke} />
+              <Text style={styles.infoLabel}>E-mail</Text>
+            </View>
+            <Text style={styles.infoValue} numberOfLines={1}>{user?.email}</Text>
           </View>
         </View>
 
@@ -40,34 +50,18 @@ export default function ProfileScreen() {
           style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutPressed]}
           onPress={signOut}
         >
-          <LogOut size={20} color={Colors.danger} style={{ marginRight: Spacing.sm }} />
-          <Text style={styles.logoutText}>Sair da Conta</Text>
+          <LogOut size={Icon.md} color={Colors.danger} strokeWidth={Icon.stroke} style={{ marginRight: Spacing.sm }} />
+          <Text style={styles.logoutText}>Sair da conta</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const Glass = {
-  fill: 'rgba(255, 255, 255, 0.05)',
-  fillStrong: 'rgba(255, 255, 255, 0.08)',
-  border: 'rgba(255, 255, 255, 0.10)',
-  borderStrong: 'rgba(255, 255, 255, 0.16)',
-} as const;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  glowTop: {
-    position: 'absolute',
-    top: -140,
-    right: -90,
-    width: 320,
-    height: 320,
-    borderRadius: 320,
-    backgroundColor: 'rgba(210, 255, 58, 0.10)',
   },
   content: {
     flex: 1,
@@ -76,78 +70,82 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  avatarContainer: {
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.xxl,
-    marginBottom: Spacing.xxl,
-  },
-  avatarRing: {
-    width: 112,
-    height: 112,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Glass.fill,
-    borderWidth: 1,
-    borderColor: Glass.borderStrong,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   avatar: {
-    width: 96,
-    height: 96,
+    width: 72,
+    height: 72,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Elevation.card,
   },
   avatarText: {
-    fontSize: 32,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: 28,
+    fontFamily: Font.semibold,
     color: Colors.textInverted,
   },
+  headerText: {
+    flex: 1,
+  },
   name: {
-    fontSize: FontSize.xxl,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: FontSize.xl,
+    fontFamily: Font.semibold,
     color: Colors.text,
     marginBottom: 2,
   },
   email: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: Font.regular,
   },
-  section: {
-    backgroundColor: Glass.fillStrong,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
     borderWidth: 1,
-    borderColor: Glass.border,
+    borderColor: Colors.border,
     marginBottom: Spacing.xl,
+    ...Elevation.card,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   infoLabel: {
     fontSize: FontSize.md,
     color: Colors.textSecondary,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: Font.medium,
   },
   infoValue: {
     fontSize: FontSize.md,
     color: Colors.text,
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: Font.semibold,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
   },
   logoutButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.10)',
+    backgroundColor: Colors.dangerSoft,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.45)',
+    borderColor: Colors.dangerBorder,
     borderRadius: BorderRadius.full,
     padding: Spacing.md,
     alignItems: 'center',
@@ -155,13 +153,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutPressed: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    opacity: 0.75,
   },
   logoutText: {
     color: Colors.danger,
     fontSize: FontSize.md,
-    fontFamily: 'Poppins_700Bold',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontFamily: Font.semibold,
   },
 });

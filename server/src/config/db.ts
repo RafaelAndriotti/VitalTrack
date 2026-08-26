@@ -26,3 +26,13 @@ db.pragma("synchronous = NORMAL");
 // so it is safe to run every start and self-creates a fresh database file.
 const schemaPath = resolve(__dirname, "../../../database/schema.sqlite.sql");
 db.exec(readFileSync(schemaPath, "utf8"));
+
+// Lightweight migrations for pre-existing databases. CREATE TABLE IF NOT EXISTS
+// never adds columns to a table that already exists, so new columns are patched
+// in here. Guarded by PRAGMA table_info so it stays idempotent.
+const workoutColumns = db
+  .prepare("PRAGMA table_info(workouts)")
+  .all() as { name: string }[];
+if (!workoutColumns.some((c) => c.name === "muscle_groups")) {
+  db.exec("ALTER TABLE workouts ADD COLUMN muscle_groups TEXT");
+}

@@ -1,17 +1,23 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Link, router } from 'expo-router';
-import { Dumbbell, Star, ArrowRight } from 'lucide-react-native';
+import { Dumbbell, ArrowRight } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { Colors, Spacing, FontSize, BorderRadius, Font, Icon } from '@/constants/theme';
 
-/* Cores de vidro (glassmorphism), iguais às do welcome.tsx. */
+/* Exceção de material: só o login usa um card de vidro (translúcido), a pedido.
+   O restante do app segue o mundo sólido Clean Clínico. */
 const Glass = {
-  fill: 'rgba(255, 255, 255, 0.05)',
-  fillStrong: 'rgba(255, 255, 255, 0.08)',
-  border: 'rgba(255, 255, 255, 0.10)',
-  borderStrong: 'rgba(255, 255, 255, 0.16)',
+  card: 'rgba(255, 255, 255, 0.06)',
+  cardBorder: 'rgba(255, 255, 255, 0.12)',
+  field: 'rgba(255, 255, 255, 0.08)',
+  fieldBorder: 'rgba(255, 255, 255, 0.12)',
+  divider: 'rgba(255, 255, 255, 0.10)',
 } as const;
+
+function validateEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -23,16 +29,18 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
-      setError('Preencha todos os campos');
+      setError('Preencha e-mail e senha.');
       return;
     }
-
+    if (!validateEmail(email.trim())) {
+      setError('Digite um e-mail válido.');
+      return;
+    }
     setError('');
     setLoading(true);
-
     try {
       await signIn(email.trim(), password);
-      router.replace('/(tabs)/workouts');
+      router.replace('/(tabs)/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
     } finally {
@@ -41,36 +49,26 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Brilhos radiais de fundo, como no hero */}
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Atmosfera: brilhos radiais suaves atrás do card */}
       <View pointerEvents="none" style={styles.glowTop} />
       <View pointerEvents="none" style={styles.glowBottom} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <View style={styles.logoBadge}>
-              <Dumbbell size={40} color={Colors.primary} />
-            </View>
-            <Text style={styles.title}>VitalTrack</Text>
-            <View style={styles.badge}>
-              <Star size={13} color={Colors.primary} fill={Colors.primary} />
-              <Text style={styles.badgeText}>Controle seus treinos e dieta</Text>
-            </View>
+        <View style={styles.card}>
+          {/* Marca */}
+          <View style={styles.logo}>
+            <Dumbbell size={Icon.lg} color={Colors.primary} strokeWidth={Icon.stroke} />
           </View>
+          <Text style={styles.title}>VitalTrack</Text>
+          <Text style={styles.subtitle}>Seu treino e dieta em um só lugar</Text>
 
+          {/* Formulário */}
           <View style={styles.form}>
-            {error ? (
-              <Text style={styles.error} accessibilityRole="alert">{error}</Text>
-            ) : null}
-
             <TextInput
               style={[styles.input, focusedField === 'email' && styles.inputFocused]}
               placeholder="E-mail"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="rgba(255,255,255,0.45)"
               value={email}
               onChangeText={setEmail}
               onFocus={() => setFocusedField('email')}
@@ -79,17 +77,19 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-
             <TextInput
               style={[styles.input, focusedField === 'password' && styles.inputFocused]}
               placeholder="Senha"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="rgba(255,255,255,0.45)"
               value={password}
               onChangeText={setPassword}
               onFocus={() => setFocusedField('password')}
               onBlur={() => setFocusedField(null)}
               secureTextEntry
             />
+            {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+
+            <View style={styles.divider} />
 
             <Pressable
               accessibilityRole="button"
@@ -102,18 +102,19 @@ export default function LoginScreen() {
               ) : (
                 <>
                   <Text style={styles.buttonText}>Entrar</Text>
-                  <ArrowRight size={18} color={Colors.textInverted} />
+                  <ArrowRight size={Icon.md} color={Colors.textInverted} strokeWidth={Icon.stroke} />
                 </>
               )}
             </Pressable>
 
-            <Link href="/(auth)/register" asChild>
-              <Pressable accessibilityRole="button" style={styles.link}>
-                <Text style={styles.linkText}>
-                  Não tem conta? <Text style={styles.linkHighlight}>Criar conta</Text>
-                </Text>
-              </Pressable>
-            </Link>
+            <View style={styles.signupRow}>
+              <Text style={styles.signupText}>Não tem conta? </Text>
+              <Link href="/(auth)/register" asChild>
+                <Pressable accessibilityRole="button" hitSlop={6}>
+                  <Text style={styles.signupLink}>Criar conta</Text>
+                </Pressable>
+              </Link>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -122,14 +123,9 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: Spacing.xl },
+
   glowTop: {
     position: 'absolute',
     top: -120,
@@ -137,7 +133,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 320,
-    backgroundColor: 'rgba(210, 255, 58, 0.10)',
+    backgroundColor: 'rgba(62, 142, 126, 0.12)',
   },
   glowBottom: {
     position: 'absolute',
@@ -146,84 +142,58 @@ const styles = StyleSheet.create({
     width: 340,
     height: 340,
     borderRadius: 340,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: 'rgba(92, 156, 196, 0.08)',
   },
-  content: {
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.xxl,
-    maxWidth: 400,
+
+  card: {
     width: '100%',
+    maxWidth: 380,
     alignSelf: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: Spacing.xxl,
-    gap: Spacing.sm,
-  },
-  logoBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: 'rgba(210, 255, 58, 0.10)',
+    backgroundColor: Glass.card,
     borderWidth: 1,
-    borderColor: Glass.borderStrong,
+    borderColor: Glass.cardBorder,
+    borderRadius: 28,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.4,
+    shadowRadius: 32,
+    elevation: 10,
+  },
+
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: Glass.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: 'Poppins_900Black',
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Glass.fill,
-    borderWidth: 1,
-    borderColor: Glass.border,
-    borderRadius: BorderRadius.full,
-    paddingVertical: 6,
-    paddingHorizontal: Spacing.md,
-  },
-  badgeText: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontFamily: 'Poppins_600SemiBold',
-    letterSpacing: 0.3,
-  },
-  form: {
-    gap: Spacing.md,
-  },
-  error: {
-    color: Colors.danger,
-    fontSize: FontSize.sm,
-    textAlign: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.35)',
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    fontFamily: 'Poppins_500Medium',
-  },
+  title: { fontSize: FontSize.xl, fontFamily: Font.bold, color: Colors.text, letterSpacing: -0.3 },
+  subtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: Font.regular, marginTop: 2, marginBottom: Spacing.lg, textAlign: 'center' },
+
+  form: { width: '100%', gap: Spacing.md },
   input: {
-    backgroundColor: Glass.fill,
+    width: '100%',
+    backgroundColor: Glass.field,
     borderWidth: 1,
-    borderColor: Glass.border,
-    borderRadius: BorderRadius.full,
-    padding: Spacing.md,
+    borderColor: Glass.fieldBorder,
+    borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     fontSize: FontSize.md,
     color: Colors.text,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: Font.medium,
   },
-  inputFocused: {
-    borderColor: Colors.primary,
-    backgroundColor: Glass.fillStrong,
-  },
+  inputFocused: { borderColor: Colors.primary },
+  error: { color: Colors.danger, fontSize: FontSize.sm, fontFamily: Font.medium },
+
+  divider: { height: 1, backgroundColor: Glass.divider, marginVertical: Spacing.xs },
+
   button: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -231,35 +201,17 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.full,
-    padding: Spacing.md,
-    marginTop: Spacing.md,
-    shadowColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 4,
   },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonText: {
-    color: Colors.textInverted,
-    fontSize: FontSize.md,
-    fontFamily: 'Poppins_700Bold',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  link: {
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  linkText: {
-    color: Colors.textSecondary,
-    fontSize: FontSize.sm,
-    fontFamily: 'Poppins_500Medium',
-  },
-  linkHighlight: {
-    color: Colors.primary,
-    fontFamily: 'Poppins_700Bold',
-  },
+  buttonPressed: { opacity: 0.85 },
+  buttonText: { color: Colors.textInverted, fontSize: FontSize.md, fontFamily: Font.semibold },
+
+  signupRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: Spacing.xs },
+  signupText: { color: Colors.textSecondary, fontSize: FontSize.sm, fontFamily: Font.regular },
+  signupLink: { color: Colors.primary, fontSize: FontSize.sm, fontFamily: Font.semibold },
 });
