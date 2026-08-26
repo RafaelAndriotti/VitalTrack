@@ -5,7 +5,7 @@ import { water as waterApi } from '@/services/api';
 import type { DailyWater } from '@/types';
 import { Colors, Spacing, FontSize, BorderRadius, Font, Icon } from '@/constants/theme';
 import { Screen, Card, ProgressBar, Loading, ErrorBanner } from '@/components/ui';
-import { CupSoda, Droplets, GlassWater, Milk, Minus, Plus } from 'lucide-react-native';
+import { CupSoda, Droplets, GlassWater, Milk, Minus } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 function today(): string {

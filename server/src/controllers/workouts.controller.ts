@@ -42,6 +42,23 @@ function ownsWorkout(workoutId: string, userId: string): boolean {
     .get(workoutId, userId);
 }
 
+// Confirm the exercise belongs to this workout AND the workout belongs to the
+// user. Guards the set operations so an exerciseId from a different workout
+// cannot be grafted onto this one (ownership-chain integrity).
+function ownsExercise(
+  exerciseId: string,
+  workoutId: string,
+  userId: string
+): boolean {
+  return !!db
+    .prepare(
+      `SELECT e.id FROM exercises e
+       JOIN workouts w ON w.id = e.workout_id
+       WHERE e.id = ? AND e.workout_id = ? AND w.user_id = ?`
+    )
+    .get(exerciseId, workoutId, userId);
+}
+
 // GET /api/workouts/library/exercises — list global and user's exercises
 export async function listExerciseLibrary(
   req: AuthRequest,
@@ -346,8 +363,8 @@ export async function addSet(req: AuthRequest, res: Response): Promise<void> {
     const { id: workoutId, exerciseId } = req.params;
     const { weight, reps, completed, order_index } = req.body;
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
+    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
+      res.status(404).json({ error: "Exercise not found" });
       return;
     }
 
@@ -381,8 +398,8 @@ export async function updateSet(req: AuthRequest, res: Response): Promise<void> 
     const { id: workoutId, exerciseId, setId } = req.params;
     const { weight, reps, completed, order_index } = req.body;
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
+    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
+      res.status(404).json({ error: "Set not found" });
       return;
     }
 
@@ -427,8 +444,8 @@ export async function deleteSet(req: AuthRequest, res: Response): Promise<void> 
   try {
     const { id: workoutId, exerciseId, setId } = req.params;
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
+    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
+      res.status(404).json({ error: "Set not found" });
       return;
     }
 

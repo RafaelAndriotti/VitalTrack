@@ -1,0 +1,23 @@
+# Railway backend build for the VitalTrack API (server/).
+#
+# The whole repo is kept as the build context on purpose: at boot,
+# server/src/config/db.ts loads ../../../database/schema.sqlite.sql, which lives
+# at the repo root (outside server/). Setting Railway's Root Directory to
+# "server" would drop that folder and break startup, so we build from the root
+# and cd into server for each phase instead.
+#
+# python3 / gcc / gnumake are here only as a fallback: better-sqlite3 ships
+# prebuilt binaries for Node 22 on Linux x64, but if a prebuild is ever missing
+# node-gyp can still compile the native module.
+
+[phases.setup]
+nixPkgs = ['nodejs_22', 'python3', 'gcc', 'gnumake']
+
+[phases.install]
+cmds = ['cd server && npm ci']
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = 'cd server && npm start'

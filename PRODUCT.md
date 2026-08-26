@@ -10,7 +10,7 @@ Mobile-first priority (iOS/Android via Expo Go and device). Web is a supported b
 
 ## Stack
 
-Existing codebase. Front-end: React Native 0.86 + React 19, Expo Router (file-based routing, auth-group protected routes), TypeScript, `expo-secure-store` (session), `lucide-react-native` (icons), Poppins via `@expo-google-fonts`. Back-end: Node.js + Express + TypeScript (run via `tsx`), `jsonwebtoken` + `bcryptjs` auth, Supabase (PostgreSQL) via `@supabase/supabase-js`. Built from scratch without boilerplate frameworks.
+Existing codebase. Front-end: React Native 0.86 + React 19, Expo Router (file-based routing, auth-group protected routes), TypeScript, `expo-secure-store` (session), `lucide-react-native` (icons), Poppins via `@expo-google-fonts`. Back-end: Node.js + Express + TypeScript (run via `tsx`), `jsonwebtoken` + `bcryptjs` auth, SQLite via `better-sqlite3` (prepared statements). Built from scratch without boilerplate frameworks.
 
 ## Users
 
@@ -37,10 +37,10 @@ Serves two goals with equal weight: a portfolio-grade demonstration of craft (UI
 ## Capabilities and Constraints
 
 - REST API: all routes except `auth` require `Authorization: Bearer <token>`.
-- Database: PostgreSQL on Supabase, 8 related tables (`users`, `workouts`, `exercises`, `exercise_sets`, `meals`, `meal_items`, `exercise_library`, `food_library`, `daily_water`), indexes on frequent lookups, triggers auto-updating `updated_at`.
+- Database: SQLite (local file via `better-sqlite3`), 8 related tables (`users`, `workouts`, `exercises`, `exercise_sets`, `meals`, `meal_items`, `exercise_library`, `food_library`, `daily_water`), indexes on frequent lookups, triggers auto-updating `updated_at`.
 - Passwords hashed with bcrypt (salt rounds = 12).
 - Optimistic UI updates used for instant response (notably hydration).
-- Undecided / not yet built: macronutrient goals are currently fixed (not user-configurable), no automated tests, no pagination on workout/meal history, no Supabase Row Level Security yet.
+- Undecided / not yet built: macronutrient goals are currently fixed (not user-configurable), no automated tests, no pagination on workout/meal history.
 
 ## Brand Commitments
 

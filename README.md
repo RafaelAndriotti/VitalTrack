@@ -9,8 +9,7 @@ Aplicativo full-stack de saúde e fitness para registro de treinos, controle de 
 ![Expo](https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)
  
 ---
  
@@ -52,9 +51,10 @@ Todo o back-end — autenticação, regras de negócio e persistência — foi c
 **Back-end**
 - Node.js + Express + TypeScript (execução via `tsx`)
 - Autenticação com `jsonwebtoken` + `bcryptjs`
-- `Supabase` (PostgreSQL) como banco de dados, acessado via `@supabase/supabase-js`
+- `SQLite` como banco de dados, acessado via `better-sqlite3` (prepared statements)
+- `helmet` para headers de segurança e `express-rate-limit` nas rotas de autenticação
 **Banco de Dados**
-- PostgreSQL (hospedado no Supabase)
+- SQLite (arquivo local, criado automaticamente a partir do schema no boot)
 - 8 tabelas relacionadas (`users`, `workouts`, `exercises`, `exercise_sets`, `meals`, `meal_items`, `exercise_library`, `food_library`, `daily_water`)
 - Índices em colunas de busca frequente e triggers para atualização automática de `updated_at`
 ## 📂 Estrutura do Projeto
@@ -72,9 +72,10 @@ VitalTrack/
 └── server/
     └── src/
         ├── routes/            # auth, workouts, meals, water
-        ├── middleware/        # Autenticação JWT
-        ├── db.ts              # Cliente Supabase
-        └── schema.sql          # Schema do banco de dados
+        ├── middlewares/       # Autenticação JWT, rate limit, error handler
+        └── config/
+            └── db.ts          # Conexão SQLite (better-sqlite3)
+    (schema em database/schema.sqlite.sql)
 ```
  
 ## 🔌 Principais Endpoints da API
@@ -96,7 +97,6 @@ Todas as rotas (exceto `auth`) exigem o header `Authorization: Bearer <token>`.
  
 ### Pré-requisitos
 - Node.js 18+
-- Uma conta no [Supabase](https://supabase.com) (gratuita) para o banco de dados
 - Expo Go instalado no celular (opcional, para testar no dispositivo físico)
 ### 1. Clone o repositório
 ```bash
@@ -104,23 +104,22 @@ git clone https://github.com/RafaelAndriotti/VitalTrack.git
 cd VitalTrack
 ```
  
-### 2. Configure o banco de dados
-No editor SQL do seu projeto Supabase, execute nesta ordem:
-1. `server/src/schema.sql`
-2. `server/src/migration_phase2.sql`
-### 3. Configure as variáveis de ambiente do back-end
+### 2. Configure as variáveis de ambiente do back-end
 ```bash
 cd server
 cp .env.example .env
 ```
-Preencha o `.env` com os dados **do seu próprio projeto Supabase**:
+Preencha o `.env`:
 ```
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_SERVICE_KEY=sua-service-role-key
 JWT_SECRET=uma-string-longa-e-aleatoria
 PORT=3001
+# Opcional: caminho do arquivo SQLite (padrão server/data/vitaltrack.db)
+# DATABASE_PATH=/var/lib/vitaltrack/vitaltrack.db
+# Opcional: origens permitidas de CORS (separadas por vírgula)
+# CORS_ORIGIN=https://meu-app.com
 ```
 > ⚠️ O `.env` nunca deve ser commitado. Gere um `JWT_SECRET` forte, por exemplo com `openssl rand -base64 32`.
+> O banco SQLite é criado automaticamente a partir de `database/schema.sqlite.sql` no primeiro boot — nenhum passo manual de banco é necessário.
  
 ### 4. Instale as dependências e rode o back-end
 ```bash
@@ -135,13 +134,16 @@ npm install
 npm start
 ```
 Escaneie o QR Code com o app **Expo Go** ou pressione `w` para abrir no navegador.
+
+> Por padrão o app aponta para `http://localhost:3001/api`. Para outro backend,
+> defina `EXPO_PUBLIC_API_URL` (ex.: `EXPO_PUBLIC_API_URL=https://api.meu-app.com/api`).
+> **Em produção use sempre `https`** — o token JWT e os dados do usuário trafegam nessa conexão.
  
 ## 🗺️ Possíveis Melhorias Futuras
  
 - Metas de macronutrientes configuráveis por usuário (hoje são fixas)
 - Testes automatizados (unitários e de integração)
 - Paginação no histórico de treinos e refeições
-- Row Level Security (RLS) no Supabase como camada extra de proteção
 ## 👤 Autor
  
 **Rafael Andriotti Rebelo**
