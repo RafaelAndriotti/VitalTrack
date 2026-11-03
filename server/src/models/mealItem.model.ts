@@ -23,7 +23,17 @@ export interface MealItemFields {
   fat?: number | null;
 }
 
-const selectByMeal = db.prepare(
+export interface CreateMealItemInput extends MealItemFields {
+  mealId: string;
+  name: string;
+}
+
+export interface UpdateMealItemInput extends MealItemFields {
+  itemId: string;
+  mealId: string;
+}
+
+const selectByMeal =db.prepare(
   "SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC"
 );
 const selectById = db.prepare("SELECT * FROM meal_items WHERE id = ?");
@@ -56,11 +66,11 @@ export const mealItemModel = {
   },
 
   /** Inserts and returns the new id. Caller must have verified meal ownership. */
-  create(mealId: string, fields: MealItemFields & { name: string }): string {
+  create(fields: CreateMealItemInput): string {
     const id = randomUUID();
     insertItem.run(
       id,
-      mealId,
+      fields.mealId,
       fields.name,
       fields.amount || 100,
       fields.calories || 0,
@@ -72,10 +82,10 @@ export const mealItemModel = {
   },
 
   /** Returns true if a row was updated. Caller must have verified meal ownership. */
-  update(itemId: string, mealId: string, fields: MealItemFields): boolean {
+  update(fields: UpdateMealItemInput): boolean {
     const info = updateItem.run({
-      itemId,
-      mealId,
+      itemId: fields.itemId,
+      mealId: fields.mealId,
       name: fields.name ?? null,
       amount: fields.amount ?? null,
       calories: fields.calories ?? null,
@@ -87,7 +97,7 @@ export const mealItemModel = {
   },
 
   /** Returns true if a row was deleted. Caller must have verified meal ownership. */
-  delete(itemId: string, mealId: string): boolean {
-    return deleteInMeal.run(itemId, mealId).changes > 0;
+  delete(input: { itemId: string; mealId: string }): boolean {
+    return deleteInMeal.run(input.itemId, input.mealId).changes > 0;
   },
 };

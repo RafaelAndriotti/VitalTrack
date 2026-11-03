@@ -2,6 +2,7 @@
 // imported, because db.ts opens the SQLite file at import time. Each test
 // file runs in its own process (node:test), so each gets its own DB file.
 import { randomUUID } from "node:crypto";
+import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
@@ -9,7 +10,8 @@ import type { Server } from "node:http";
 
 export const JWT_SECRET = "test-secret-test-secret-test-secret-1234567890";
 process.env.JWT_SECRET = JWT_SECRET;
-process.env.DATABASE_PATH = join(tmpdir(), `vitaltrack-test-${randomUUID()}.db`);
+const DB_PATH = join(tmpdir(), `vitaltrack-test-${randomUUID()}.db`);
+process.env.DATABASE_PATH = DB_PATH;
 delete process.env.CORS_ORIGIN;
 
 const { default: app } = await import("../src/app.js");
@@ -30,6 +32,14 @@ export async function stopServer(): Promise<void> {
   server.closeAllConnections?.();
   await new Promise<void>((resolve) => server!.close(() => resolve()));
   server = undefined;
+
+  // The db module is a singleton opened at import time: close it only after
+  // the HTTP server stopped, then remove the temp files (missing ones are fine).
+  const { db } = await import("../src/config/db.js");
+  if (db.open) db.close();
+  for (const suffix of ["", "-wal", "-shm"]) {
+    rmSync(DB_PATH + suffix, { force: true });
+  }
 }
 
 export interface ApiResult<T = any> {

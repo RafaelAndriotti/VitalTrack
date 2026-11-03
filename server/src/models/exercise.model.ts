@@ -43,35 +43,43 @@ export const exerciseModel = {
   // Confirm the exercise belongs to this workout AND the workout belongs to the
   // user. Guards the set operations so an exerciseId from a different workout
   // cannot be grafted onto this one (ownership-chain integrity).
-  ownsExercise(exerciseId: string, workoutId: string, userId: string): boolean {
-    return !!selectOwnership.get(exerciseId, workoutId, userId);
+  ownsExercise(input: {
+    exerciseId: string;
+    workoutId: string;
+    userId: string;
+  }): boolean {
+    return !!selectOwnership.get(input.exerciseId, input.workoutId, input.userId);
   },
 
   /** Inserts and returns the new id. Caller must have verified workout ownership. */
-  create(workoutId: string, name: string, notes: string | null | undefined): string {
+  create(input: {
+    workoutId: string;
+    name: string;
+    notes?: string | null;
+  }): string {
     const id = randomUUID();
-    insertExercise.run(id, workoutId, name, notes || null);
+    insertExercise.run(id, input.workoutId, input.name, input.notes || null);
     return id;
   },
 
   /** Returns true if a row was updated. Caller must have verified workout ownership. */
-  update(
-    exerciseId: string,
-    workoutId: string,
-    name: string | null | undefined,
-    notes: string | null | undefined
-  ): boolean {
+  update(input: {
+    exerciseId: string;
+    workoutId: string;
+    name?: string | null;
+    notes?: string | null;
+  }): boolean {
     const info = updateExercise.run({
-      exerciseId,
-      workoutId,
-      name: name ?? null,
-      notes: notes ?? null,
+      exerciseId: input.exerciseId,
+      workoutId: input.workoutId,
+      name: input.name ?? null,
+      notes: input.notes ?? null,
     });
     return info.changes > 0;
   },
 
   /** Returns true if a row was deleted. Caller must have verified workout ownership. */
-  delete(exerciseId: string, workoutId: string): boolean {
-    return deleteInWorkout.run(exerciseId, workoutId).changes > 0;
+  delete(input: { exerciseId: string; workoutId: string }): boolean {
+    return deleteInWorkout.run(input.exerciseId, input.workoutId).changes > 0;
   },
 };

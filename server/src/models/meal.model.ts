@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../config/db.js";
+import { today } from "../utils/date.js";
 
 export interface MealRow {
   id: string;
@@ -36,56 +37,68 @@ const updateMeal = db.prepare(
 );
 const deleteOwned = db.prepare("DELETE FROM meals WHERE id = ? AND user_id = ?");
 
+export interface CreateMealInput {
+  userId: string;
+  name: string;
+  date?: string;
+  time?: string | null;
+}
+
+export interface UpdateMealInput {
+  id: string;
+  userId: string;
+  name?: string | null;
+  date?: string | null;
+  time?: string | null;
+}
+
 export const mealModel = {
   /** Owner-scoped lookup: undefined if the meal is not the user's. */
-  findOwned(id: string, userId: string): MealRow | undefined {
-    return selectOwnedById.get(id, userId) as MealRow | undefined;
+  findOwned(input: { id: string; userId: string }): MealRow | undefined {
+    return selectOwnedById.get(input.id, input.userId) as MealRow | undefined;
   },
 
   // Verify ownership before touching child rows (IDOR guard).
-  ownsMeal(mealId: string, userId: string): boolean {
-    return !!selectOwnedIdOnly.get(mealId, userId);
+  ownsMeal(input: { mealId: string; userId: string }): boolean {
+    return !!selectOwnedIdOnly.get(input.mealId, input.userId);
   },
 
   /** All of the user's meals, optionally filtered by date. */
-  listByUser(userId: string, date?: string): MealRow[] {
+  listByUser(input: { userId: string; date?: string }): MealRow[] {
     return (
-      date ? selectByUserAndDate.all(userId, date) : selectByUser.all(userId)
+      input.date
+        ? selectByUserAndDate.all(input.userId, input.date)
+        : selectByUser.all(input.userId)
     ) as MealRow[];
   },
 
-  /** Inserts and returns the new id. */
-  create(
-    userId: string,
-    name: string,
-    date: string,
-    time: string | null | undefined
-  ): string {
+  /** Inserts and returns the new id. Date defaults to today. */
+  create(input: CreateMealInput): string {
     const id = randomUUID();
-    insertMeal.run(id, userId, name, date, time || null);
+    insertMeal.run(
+      id,
+      input.userId,
+      input.name,
+      input.date || today(),
+      input.time || null
+    );
     return id;
   },
 
   /** Returns true if a row owned by the user was updated. */
-  update(
-    id: string,
-    userId: string,
-    name: string | null | undefined,
-    date: string | null | undefined,
-    time: string | null | undefined
-  ): boolean {
+  update(input: UpdateMealInput): boolean {
     const info = updateMeal.run({
-      id,
-      user_id: userId,
-      name: name ?? null,
-      date: date ?? null,
-      time: time ?? null,
+      id: input.id,
+      user_id: input.userId,
+      name: input.name ?? null,
+      date: input.date ?? null,
+      time: input.time ?? null,
     });
     return info.changes > 0;
   },
 
   /** Returns true if a row owned by the user was deleted. */
-  delete(id: string, userId: string): boolean {
-    return deleteOwned.run(id, userId).changes > 0;
+  delete(input: { id: string; userId: string }): boolean {
+    return deleteOwned.run(input.id, input.userId).changes > 0;
   },
 };

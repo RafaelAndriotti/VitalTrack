@@ -35,14 +35,18 @@ export const exerciseLibraryModel = {
   },
 
   /** Inserts and returns the new id. */
-  create(userId: string, name: string, muscleGroup: string | null | undefined): string {
+  create(input: {
+    userId: string;
+    name: string;
+    muscleGroup?: string | null;
+  }): string {
     const id = randomUUID();
-    insertEntry.run(id, userId, name, muscleGroup || null);
+    insertEntry.run(id, input.userId, input.name, input.muscleGroup || null);
     return id;
   },
 
   /** Only allow deleting user's own entries (user_id = ? excludes globals). */
-  deleteOwned(id: string, userId: string): boolean {
-    return deleteOwned.run(id, userId).changes > 0;
+  deleteOwned(input: { id: string; userId: string }): boolean {
+    return deleteOwned.run(input.id, input.userId).changes > 0;
   },
 };

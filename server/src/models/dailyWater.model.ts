@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../config/db.js";
+import { today } from "../utils/date.js";
 
 export interface DailyWaterRow {
   id: string;
@@ -30,30 +31,48 @@ const upsertWater = db.prepare(
      goal_ml   = COALESCE(@goal_ml, daily_water.goal_ml)`
 );
 
+export interface WaterDay {
+  date: string;
+  /** undefined when the day has no record yet. */
+  row: DailyWaterRow | undefined;
+  /** Goal from the user's most recent record; only looked up when row is missing. */
+  latestGoal: number | undefined;
+}
+
+export interface UpsertWaterInput {
+  userId: string;
+  date?: string;
+  amountMl?: number;
+  goalMl?: number;
+}
+
 export const dailyWaterModel = {
-  findByDate(userId: string, date: string): DailyWaterRow | undefined {
-    return selectByUserAndDate.get(userId, date) as DailyWaterRow | undefined;
+  /** Record for the day (default: today) plus the fallback goal when absent. */
+  getDay(input: { userId: string; date?: string }): WaterDay {
+    const date = input.date || today();
+    const row = selectByUserAndDate.get(input.userId, date) as
+      | DailyWaterRow
+      | undefined;
+    const latestGoal = row
+      ? undefined
+      : (selectLatestGoal.get(input.userId) as { goal_ml: number } | undefined)
+          ?.goal_ml;
+    return { date, row, latestGoal };
   },
 
-  /** Goal from the user's most recent record, if any. */
-  findLatestGoal(userId: string): number | undefined {
-    const row = selectLatestGoal.get(userId) as { goal_ml: number } | undefined;
-    return row?.goal_ml;
-  },
-
-  /** Atomic upsert via UNIQUE(user_id, date); undefined means "keep current". */
-  upsert(
-    userId: string,
-    date: string,
-    amountMl: number | undefined,
-    goalMl: number | undefined
-  ): void {
+  /**
+   * Atomic upsert via UNIQUE(user_id, date); undefined amount/goal means
+   * "keep current". Date defaults to today. Returns the stored row.
+   */
+  upsert(input: UpsertWaterInput): DailyWaterRow | undefined {
+    const date = input.date || today();
     upsertWater.run({
       id: randomUUID(),
-      user_id: userId,
+      user_id: input.userId,
       date,
-      amount_ml: amountMl ?? null,
-      goal_ml: goalMl ?? null,
+      amount_ml: input.amountMl ?? null,
+      goal_ml: input.goalMl ?? null,
     });
+    return selectByUserAndDate.get(input.userId, date) as DailyWaterRow | undefined;
   },
 };

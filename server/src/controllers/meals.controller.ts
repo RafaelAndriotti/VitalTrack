@@ -10,7 +10,8 @@ import {
 } from "../views/meal.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
-import { today } from "../utils/date.js";
+import { requireUserId } from "../utils/requireUserId.js";
+import { requireFound } from "../utils/requireFound.js";
 
 interface FoodLibraryBody {
   name?: string;
@@ -40,17 +41,17 @@ function loadMeal(meal: MealRow): MealResponse {
   return renderMeal(meal, mealItemModel.listByMeal(meal.id));
 }
 
-// Load a meal with its items, scoped to the owner. Returns undefined if the
-// meal does not belong to the user (used both for reads and 404s).
-function getMealWithItems(mealId: string, userId: string): MealResponse | undefined {
-  const meal = mealModel.findOwned(mealId, userId);
-  return meal ? loadMeal(meal) : undefined;
+// Load a meal with its items, scoped to the owner. Throws (500) if the row is
+// missing; only used right after a successful insert/update.
+function getMealWithItems(id: string, userId: string): MealResponse {
+  const meal = requireFound(mealModel.findOwned({ id, userId }));
+  return loadMeal(meal);
 }
 
 // GET /api/meals/library/foods — list global and user's food
 export const listFoodLibrary = asyncHandler(
   async (req, res) => {
-    const data = foodLibraryModel.listVisibleToUser(req.userId!);
+    const data = foodLibraryModel.listVisibleToUser(requireUserId(req));
     res.json(renderFoodLibrary(data));
   },
   "List food library error",
@@ -67,7 +68,7 @@ export const createFoodLibrary = asyncHandler(
     }
 
     const id = foodLibraryModel.create({
-      userId: req.userId!,
+      userId: requireUserId(req),
       name,
       calories,
       protein,
@@ -76,7 +77,7 @@ export const createFoodLibrary = asyncHandler(
       servingSize: serving_size,
     });
 
-    const data = foodLibraryModel.findById(id)!;
+    const data = requireFound(foodLibraryModel.findById(id));
     res.status(201).json(renderFoodLibraryEntry(data));
   },
   "Create food library error",
@@ -89,7 +90,7 @@ export const deleteFoodLibrary = asyncHandler(
     const { id } = req.params;
 
     // Only allow deleting user's own foods (user_id = ? excludes globals)
-    if (!foodLibraryModel.deleteOwned(id, req.userId!)) {
+    if (!foodLibraryModel.deleteOwned({ id, userId: requireUserId(req) })) {
       throw new HttpError(404, "Food not found or cannot be deleted");
     }
     res.status(204).send();
@@ -103,10 +104,10 @@ export const listMeals = asyncHandler(
   async (req, res) => {
     const { date } = req.query;
 
-    const meals = mealModel.listByUser(
-      req.userId!,
-      date && typeof date === "string" ? date : undefined
-    );
+    const meals = mealModel.listByUser({
+      userId: requireUserId(req),
+      date: date && typeof date === "string" ? date : undefined,
+    });
 
     res.json(meals.map(loadMeal));
   },
@@ -123,9 +124,10 @@ export const createMeal = asyncHandler(
       throw new HttpError(400, "Meal name is required");
     }
 
-    const id = mealModel.create(req.userId!, name, date || today(), time);
+    const userId = requireUserId(req);
+    const id = mealModel.create({ userId, name, date, time });
 
-    res.status(201).json(getMealWithItems(id, req.userId!));
+    res.status(201).json(getMealWithItems(id, userId));
   },
   "Create meal error",
   "Failed to create meal"
@@ -137,11 +139,13 @@ export const updateMeal = asyncHandler(
     const { id } = req.params;
     const { name, date, time } = req.body as MealBody;
 
-    if (!mealModel.update(id, req.userId!, name, date, time)) {
+    const userId = requireUserId(req);
+
+    if (!mealModel.update({ id, userId, name, date, time })) {
       throw new HttpError(404, "Meal not found");
     }
 
-    res.json(getMealWithItems(id, req.userId!));
+    res.json(getMealWithItems(id, userId));
   },
   "Update meal error",
   "Failed to update meal"
@@ -152,7 +156,7 @@ export const deleteMeal = asyncHandler(
   async (req, res) => {
     const { id } = req.params;
 
-    if (!mealModel.delete(id, req.userId!)) {
+    if (!mealModel.delete({ id, userId: requireUserId(req) })) {
       throw new HttpError(404, "Meal not found");
     }
 
@@ -173,11 +177,12 @@ export const addMealItem = asyncHandler(
     }
 
     // Verify ownership
-    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+    if (!mealModel.ownsMeal({ mealId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Meal not found");
     }
 
-    const id = mealItemModel.create(mealId, {
+    const id = mealItemModel.create({
+      mealId,
       name,
       amount,
       calories,
@@ -186,7 +191,7 @@ export const addMealItem = asyncHandler(
       fat,
     });
 
-    const data = mealItemModel.findById(id)!;
+    const data = requireFound(mealItemModel.findById(id));
     res.status(201).json(renderMealItem(data));
   },
   "Add food item error",
@@ -200,11 +205,13 @@ export const updateMealItem = asyncHandler(
     const { name, amount, calories, protein, carbs, fat } = req.body as MealItemBody;
 
     // Verify ownership
-    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+    if (!mealModel.ownsMeal({ mealId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Meal not found");
     }
 
-    const updated = mealItemModel.update(itemId, mealId, {
+    const updated = mealItemModel.update({
+      itemId,
+      mealId,
       name,
       amount,
       calories,
@@ -217,7 +224,7 @@ export const updateMealItem = asyncHandler(
       throw new HttpError(404, "Food item not found");
     }
 
-    const data = mealItemModel.findById(itemId)!;
+    const data = requireFound(mealItemModel.findById(itemId));
     res.json(renderMealItem(data));
   },
   "Update food item error",
@@ -230,11 +237,11 @@ export const deleteMealItem = asyncHandler(
     const { id: mealId, itemId } = req.params;
 
     // Verify ownership
-    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+    if (!mealModel.ownsMeal({ mealId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Meal not found");
     }
 
-    if (!mealItemModel.delete(itemId, mealId)) {
+    if (!mealItemModel.delete({ itemId, mealId })) {
       throw new HttpError(404, "Food item not found");
     }
 

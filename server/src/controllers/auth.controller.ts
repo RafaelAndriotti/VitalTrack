@@ -4,6 +4,7 @@ import { generateToken } from "../libs/token.js";
 import { renderAuth } from "../views/user.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
+import { requireFound } from "../utils/requireFound.js";
 
 interface RegisterBody {
   email?: string;
@@ -34,9 +35,9 @@ export const register = asyncHandler(
 
     // Hash password and create user
     const passwordHash = await bcrypt.hash(password, 12);
-    const id = userModel.create(normalizedEmail, passwordHash, name);
+    const id = userModel.create({ email: normalizedEmail, passwordHash, name });
 
-    const user = userModel.findPublicById(id)!;
+    const user = requireFound(userModel.findPublicById(id));
     const token = generateToken(id);
 
     res.status(201).json(renderAuth(token, user));

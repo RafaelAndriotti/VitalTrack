@@ -13,7 +13,8 @@ import {
 } from "../views/workout.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
-import { today } from "../utils/date.js";
+import { requireUserId } from "../utils/requireUserId.js";
+import { requireFound } from "../utils/requireFound.js";
 
 interface ExerciseLibraryBody {
   name?: string;
@@ -49,16 +50,17 @@ function loadWorkout(workout: WorkoutRow): WorkoutResponse {
   return renderWorkout(workout, exercises);
 }
 
-// Load a single owned workout fully hydrated, or undefined if not the owner.
-function getWorkout(id: string, userId: string): WorkoutResponse | undefined {
-  const workout = workoutModel.findOwned(id, userId);
-  return workout ? loadWorkout(workout) : undefined;
+// Load a single owned workout fully hydrated. Throws (500) if the row is missing;
+// only used right after a successful insert/update.
+function getWorkout(id: string, userId: string): WorkoutResponse {
+  const workout = requireFound(workoutModel.findOwned({ id, userId }));
+  return loadWorkout(workout);
 }
 
 // GET /api/workouts/library/exercises — list global and user's exercises
 export const listExerciseLibrary = asyncHandler(
   async (req, res) => {
-    const data = exerciseLibraryModel.listVisibleToUser(req.userId!);
+    const data = exerciseLibraryModel.listVisibleToUser(requireUserId(req));
     res.json(renderExerciseLibrary(data));
   },
   "List exercise library error",
@@ -73,8 +75,12 @@ export const createExerciseLibrary = asyncHandler(
       throw new HttpError(400, "Exercise name is required");
     }
 
-    const id = exerciseLibraryModel.create(req.userId!, name, muscle_group);
-    const data = exerciseLibraryModel.findById(id)!;
+    const id = exerciseLibraryModel.create({
+      userId: requireUserId(req),
+      name,
+      muscleGroup: muscle_group,
+    });
+    const data = requireFound(exerciseLibraryModel.findById(id));
     res.status(201).json(renderExerciseLibraryEntry(data));
   },
   "Create exercise library error",
@@ -87,7 +93,7 @@ export const deleteExerciseLibrary = asyncHandler(
     const { id } = req.params;
 
     // Only allow deleting user's own exercises (user_id = ? excludes globals)
-    if (!exerciseLibraryModel.deleteOwned(id, req.userId!)) {
+    if (!exerciseLibraryModel.deleteOwned({ id, userId: requireUserId(req) })) {
       throw new HttpError(404, "Exercise not found or cannot be deleted");
     }
     res.status(204).send();
@@ -99,7 +105,7 @@ export const deleteExerciseLibrary = asyncHandler(
 // GET /api/workouts — list user's workouts with exercises and sets
 export const listWorkouts = asyncHandler(
   async (req, res) => {
-    const workouts = workoutModel.listByUser(req.userId!);
+    const workouts = workoutModel.listByUser(requireUserId(req));
     res.json(workouts.map(loadWorkout));
   },
   "List workouts error",
@@ -110,21 +116,22 @@ export const listWorkouts = asyncHandler(
 export const createWorkout = asyncHandler(
   async (req, res) => {
     const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
+    const userId = requireUserId(req);
 
     if (!name) {
       throw new HttpError(400, "Workout name is required");
     }
 
     const id = workoutModel.create({
-      userId: req.userId!,
+      userId,
       name,
-      date: date || today(),
+      date,
       completed,
       notes,
       muscleGroups: muscle_groups,
     });
 
-    res.status(201).json(getWorkout(id, req.userId!));
+    res.status(201).json(getWorkout(id, userId));
   },
   "Create workout error",
   "Failed to create workout"
@@ -135,10 +142,11 @@ export const updateWorkout = asyncHandler(
   async (req, res) => {
     const { id } = req.params;
     const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
+    const userId = requireUserId(req);
 
     const updated = workoutModel.update({
       id,
-      userId: req.userId!,
+      userId,
       name,
       date,
       notes,
@@ -150,7 +158,7 @@ export const updateWorkout = asyncHandler(
       throw new HttpError(404, "Workout not found");
     }
 
-    res.json(getWorkout(id, req.userId!));
+    res.json(getWorkout(id, userId));
   },
   "Update workout error",
   "Failed to update workout"
@@ -161,7 +169,7 @@ export const deleteWorkout = asyncHandler(
   async (req, res) => {
     const { id } = req.params;
 
-    if (!workoutModel.delete(id, req.userId!)) {
+    if (!workoutModel.delete({ id, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
     }
 
@@ -181,12 +189,12 @@ export const addExercise = asyncHandler(
       throw new HttpError(400, "Exercise name is required");
     }
 
-    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+    if (!workoutModel.ownsWorkout({ workoutId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
     }
 
-    const id = exerciseModel.create(workoutId, name, notes);
-    const data = exerciseModel.findById(id)!;
+    const id = exerciseModel.create({ workoutId, name, notes });
+    const data = requireFound(exerciseModel.findById(id));
     res.status(201).json(renderExerciseWithSets(data, []));
   },
   "Add exercise error",
@@ -198,11 +206,11 @@ export const deleteExercise = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
 
-    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+    if (!workoutModel.ownsWorkout({ workoutId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
     }
 
-    if (!exerciseModel.delete(exerciseId, workoutId)) {
+    if (!exerciseModel.delete({ exerciseId, workoutId })) {
       throw new HttpError(404, "Exercise not found");
     }
 
@@ -218,15 +226,15 @@ export const updateExercise = asyncHandler(
     const { id: workoutId, exerciseId } = req.params;
     const { name, notes } = req.body as ExerciseBody;
 
-    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+    if (!workoutModel.ownsWorkout({ workoutId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
     }
 
-    if (!exerciseModel.update(exerciseId, workoutId, name, notes)) {
+    if (!exerciseModel.update({ exerciseId, workoutId, name, notes })) {
       throw new HttpError(404, "Exercise not found");
     }
 
-    const updatedExercise = exerciseModel.findById(exerciseId)!;
+    const updatedExercise = requireFound(exerciseModel.findById(exerciseId));
     res.json(renderExercise(updatedExercise));
   },
   "Update exercise error",
@@ -239,7 +247,11 @@ export const addSet = asyncHandler(
     const { id: workoutId, exerciseId } = req.params;
     const { weight, reps, completed, order_index } = req.body as SetBody;
 
-    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+    if (!exerciseModel.ownsExercise({
+        exerciseId,
+        workoutId,
+        userId: requireUserId(req),
+      })) {
       throw new HttpError(404, "Exercise not found");
     }
 
@@ -251,7 +263,7 @@ export const addSet = asyncHandler(
       orderIndex: order_index,
     });
 
-    const data = exerciseSetModel.findById(id)!;
+    const data = requireFound(exerciseSetModel.findById(id));
     res.status(201).json(renderSet(data));
   },
   "Add set error",
@@ -264,7 +276,11 @@ export const updateSet = asyncHandler(
     const { id: workoutId, exerciseId, setId } = req.params;
     const { weight, reps, completed, order_index } = req.body as SetBody;
 
-    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+    if (!exerciseModel.ownsExercise({
+        exerciseId,
+        workoutId,
+        userId: requireUserId(req),
+      })) {
       throw new HttpError(404, "Set not found");
     }
 
@@ -281,7 +297,7 @@ export const updateSet = asyncHandler(
       throw new HttpError(404, "Set not found");
     }
 
-    const data = exerciseSetModel.findById(setId)!;
+    const data = requireFound(exerciseSetModel.findById(setId));
     res.json(renderSet(data));
   },
   "Update set error",
@@ -293,11 +309,15 @@ export const deleteSet = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId, setId } = req.params;
 
-    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+    if (!exerciseModel.ownsExercise({
+        exerciseId,
+        workoutId,
+        userId: requireUserId(req),
+      })) {
       throw new HttpError(404, "Set not found");
     }
 
-    if (!exerciseSetModel.delete(setId, exerciseId)) {
+    if (!exerciseSetModel.delete({ setId, exerciseId })) {
       throw new HttpError(404, "Set not found");
     }
 

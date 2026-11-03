@@ -19,6 +19,11 @@ export function asyncHandler(
     try {
       await handler(req, res);
     } catch (err) {
+      // Response already (partially) sent: cannot answer again, just log.
+      if (res.headersSent) {
+        console.error(`${logLabel}:`, (err as Error).message);
+        return;
+      }
       if (err instanceof HttpError) {
         res.status(err.status).json({ error: err.message });
         return;

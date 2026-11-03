@@ -31,9 +31,9 @@ export const userModel = {
   },
 
   /** Inserts a user and returns the new id. */
-  create(email: string, passwordHash: string, name: string): string {
+  create(input: { email: string; passwordHash: string; name: string }): string {
     const id = randomUUID();
-    insertUser.run(id, email, passwordHash, name);
+    insertUser.run(id, input.email, input.passwordHash, input.name);
     return id;
   },
 

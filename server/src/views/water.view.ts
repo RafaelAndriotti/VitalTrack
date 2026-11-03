@@ -1,7 +1,7 @@
 import type { DailyWaterRow } from "../models/dailyWater.model.js";
 
 export interface DefaultWaterResponse {
-  user_id: string | undefined;
+  user_id: string;
   date: string;
   amount_ml: number;
   goal_ml: number;
@@ -15,7 +15,7 @@ export function renderWater(row: DailyWaterRow): DailyWaterRow {
 
 /** Shape returned when the day has no record yet (goal: last known or 2000). */
 export function renderDefaultWater(
-  userId: string | undefined,
+  userId: string,
   date: string,
   latestGoal: number | undefined
 ): DefaultWaterResponse {

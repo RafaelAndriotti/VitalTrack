@@ -2,7 +2,8 @@ import { dailyWaterModel } from "../models/dailyWater.model.js";
 import { renderWater, renderDefaultWater } from "../views/water.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
-import { today } from "../utils/date.js";
+import { requireUserId } from "../utils/requireUserId.js";
+import { requireFound } from "../utils/requireFound.js";
 
 interface UpsertWaterBody {
   date?: string;
@@ -13,19 +14,21 @@ interface UpsertWaterBody {
 // GET /api/water?date=YYYY-MM-DD
 export const getWater = asyncHandler(
   async (req, res) => {
-    const date = (req.query.date as string) || today();
+    const userId = requireUserId(req);
 
-    const data = dailyWaterModel.findByDate(req.userId!, date);
+    const { date, row, latestGoal } = dailyWaterModel.getDay({
+      userId,
+      date: req.query.date as string | undefined,
+    });
 
     // Se não existe registro para o dia, retornamos um default
-    if (!data) {
-      // Busca a última meta de água configurada pelo usuário
-      const latestGoal = dailyWaterModel.findLatestGoal(req.userId!);
-      res.json(renderDefaultWater(req.userId, date, latestGoal));
+    // (com a última meta de água configurada pelo usuário, se houver)
+    if (!row) {
+      res.json(renderDefaultWater(userId, date, latestGoal));
       return;
     }
 
-    res.json(renderWater(data));
+    res.json(renderWater(row));
   },
   "Get water error",
   "Failed to fetch daily water"
@@ -35,8 +38,8 @@ export const getWater = asyncHandler(
 // Cria ou atualiza o registro do dia (Upsert atômico via UNIQUE(user_id, date))
 export const upsertWater = asyncHandler(
   async (req, res) => {
+    const userId = requireUserId(req);
     const { date, amount_ml, goal_ml } = req.body as UpsertWaterBody;
-    const targetDate = date || today();
 
     // goal_ml must be positive — a 0/negative goal persists and later causes
     // division-by-zero (NaN/Infinity) in the hydration progress bar.
@@ -51,9 +54,14 @@ export const upsertWater = asyncHandler(
       throw new HttpError(400, "amount_ml must be a non-negative number");
     }
 
-    dailyWaterModel.upsert(req.userId!, targetDate, amount_ml, goal_ml);
-
-    const result = dailyWaterModel.findByDate(req.userId!, targetDate)!;
+    const result = requireFound(
+      dailyWaterModel.upsert({
+        userId,
+        date,
+        amountMl: amount_ml,
+        goalMl: goal_ml,
+      })
+    );
     res.json(renderWater(result));
   },
   "Update water error",

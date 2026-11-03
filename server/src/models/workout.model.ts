@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../config/db.js";
+import { today } from "../utils/date.js";
 
 export interface WorkoutRow {
   id: string;
@@ -19,10 +20,10 @@ export type MuscleGroupsInput = string[] | string | null | undefined;
 export interface CreateWorkoutInput {
   userId: string;
   name: string;
-  date: string;
-  completed: unknown;
-  notes: string | null | undefined;
-  muscleGroups: MuscleGroupsInput;
+  date?: string;
+  completed?: unknown;
+  notes?: string | null;
+  muscleGroups?: MuscleGroupsInput;
 }
 
 export interface UpdateWorkoutInput {
@@ -64,8 +65,8 @@ const deleteOwned = db.prepare(
 
 export const workoutModel = {
   /** Owner-scoped lookup: undefined if the workout is not the user's. */
-  findOwned(id: string, userId: string): WorkoutRow | undefined {
-    return selectOwnedById.get(id, userId) as WorkoutRow | undefined;
+  findOwned(input: { id: string; userId: string }): WorkoutRow | undefined {
+    return selectOwnedById.get(input.id, input.userId) as WorkoutRow | undefined;
   },
 
   listByUser(userId: string): WorkoutRow[] {
@@ -73,8 +74,8 @@ export const workoutModel = {
   },
 
   // Confirm the workout belongs to the user before touching child rows (IDOR guard).
-  ownsWorkout(workoutId: string, userId: string): boolean {
-    return !!selectOwnedIdOnly.get(workoutId, userId);
+  ownsWorkout(input: { workoutId: string; userId: string }): boolean {
+    return !!selectOwnedIdOnly.get(input.workoutId, input.userId);
   },
 
   /** Inserts and returns the new id. */
@@ -84,7 +85,7 @@ export const workoutModel = {
       id,
       input.userId,
       input.name,
-      input.date,
+      input.date || today(),
       input.completed ? 1 : 0,
       input.notes || null,
       Array.isArray(input.muscleGroups)
@@ -111,7 +112,7 @@ export const workoutModel = {
   },
 
   /** Returns true if a row owned by the user was deleted. */
-  delete(id: string, userId: string): boolean {
-    return deleteOwned.run(id, userId).changes > 0;
+  delete(input: { id: string; userId: string }): boolean {
+    return deleteOwned.run(input.id, input.userId).changes > 0;
   },
 };

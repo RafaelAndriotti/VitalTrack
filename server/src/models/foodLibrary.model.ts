@@ -66,7 +66,7 @@ export const foodLibraryModel = {
   },
 
   /** Only allow deleting user's own entries (user_id = ? excludes globals). */
-  deleteOwned(id: string, userId: string): boolean {
-    return deleteOwned.run(id, userId).changes > 0;
+  deleteOwned(input: { id: string; userId: string }): boolean {
+    return deleteOwned.run(input.id, input.userId).changes > 0;
   },
 };

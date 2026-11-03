@@ -88,7 +88,7 @@ export const exerciseSetModel = {
   },
 
   /** Returns true if a row was deleted. Caller must have verified exercise ownership. */
-  delete(setId: string, exerciseId: string): boolean {
-    return deleteInExercise.run(setId, exerciseId).changes > 0;
+  delete(input: { setId: string; exerciseId: string }): boolean {
+    return deleteInExercise.run(input.setId, input.exerciseId).changes > 0;
   },
 };
