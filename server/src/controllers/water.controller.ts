@@ -1,15 +1,10 @@
 import { dailyWaterModel } from "../models/dailyWater.model.js";
 import { renderWater, renderDefaultWater } from "../views/water.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { HttpError } from "../utils/httpError.js";
 import { requireUserId } from "../utils/requireUserId.js";
 import { requireFound } from "../utils/requireFound.js";
-
-interface UpsertWaterBody {
-  date?: string;
-  amount_ml?: number;
-  goal_ml?: number;
-}
+import { validatedQuery } from "../middlewares/validate.js";
+import type { GetWaterQuery, UpsertWaterBody } from "../validators/water.validator.js";
 
 // GET /api/water?date=YYYY-MM-DD
 export const getWater = asyncHandler(
@@ -18,7 +13,7 @@ export const getWater = asyncHandler(
 
     const { date, row, latestGoal } = dailyWaterModel.getDay({
       userId,
-      date: req.query.date as string | undefined,
+      date: validatedQuery<GetWaterQuery>(res).date,
     });
 
     // Se não existe registro para o dia, retornamos um default
@@ -41,19 +36,8 @@ export const upsertWater = asyncHandler(
     const userId = requireUserId(req);
     const { date, amount_ml, goal_ml } = req.body as UpsertWaterBody;
 
-    // goal_ml must be positive — a 0/negative goal persists and later causes
-    // division-by-zero (NaN/Infinity) in the hydration progress bar.
-    if (goal_ml !== undefined && (typeof goal_ml !== "number" || goal_ml <= 0)) {
-      throw new HttpError(400, "goal_ml must be a positive number");
-    }
-    // amount_ml cannot be negative.
-    if (
-      amount_ml !== undefined &&
-      (typeof amount_ml !== "number" || amount_ml < 0)
-    ) {
-      throw new HttpError(400, "amount_ml must be a non-negative number");
-    }
-
+    // upsertWaterBody guarantees goal_ml > 0 (a 0/negative goal would cause a
+    // division by zero in the app's progress bar) and amount_ml >= 0.
     const result = requireFound(
       dailyWaterModel.upsert({
         userId,

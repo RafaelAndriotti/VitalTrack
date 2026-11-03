@@ -135,10 +135,11 @@ test("workouts: PUT cannot clear notes with null; empty name accepted", async ()
   // "" e gravado como esta.
   const r2 = await api("PUT", `/api/workouts/${w.id}`, { token: u.token, body: { notes: "" } });
   assert.equal(r2.body.notes, "");
-  // BUG conhecido: PUT aceita name vazio (POST rejeita com 400).
+  // Corrigido: PUT com name vazio agora e 400 (antes 200 e gravava "").
   const r3 = await api("PUT", `/api/workouts/${w.id}`, { token: u.token, body: { name: "" } });
-  assert.equal(r3.status, 200);
-  assert.equal(r3.body.name, "");
+  assert.equal(r3.status, 400);
+  assert.deepEqual(r3.body, { error: "Workout name is required" });
+  assert.equal((await getOne(w.id)).name, "Keep");
 });
 
 test("workouts: PUT/DELETE 404 for unknown id", async () => {
@@ -323,8 +324,17 @@ test("sets: add defaults/explicit, shape, update partial, delete, 404s", async (
   assert.equal(u2.body.reps, 0); // 0 is kept (?? not ||)
   assert.equal(u2.body.weight, 60);
 
+  // Corrigido: regra igual ao POST (order_index inteiro >= 0 no update)
   const u3 = await api("PUT", `${base}/${s.body.id}`, { token: u.token, body: { order_index: -1 } });
-  assert.equal(u3.body.order_index, -1);
+  assert.equal(u3.status, 400);
+  assert.equal(u3.body.error, "order_index must be greater than or equal to 0");
+  sets = (await getOne(w.id)).exercises[0].exercise_sets;
+  assert.deepEqual(sets.map((x: any) => x.id), [d.body.id, s.body.id]); // rejected update leaves order intact
+
+  // Valid reorder: move d after s
+  const u4 = await api("PUT", `${base}/${d.body.id}`, { token: u.token, body: { order_index: 2 } });
+  assert.equal(u4.status, 200);
+  assert.equal(u4.body.order_index, 2);
   sets = (await getOne(w.id)).exercises[0].exercise_sets;
   assert.deepEqual(sets.map((x: any) => x.id), [s.body.id, d.body.id]); // reordered
   assert.equal(sets[0].weight, 60);

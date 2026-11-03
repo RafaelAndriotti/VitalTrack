@@ -5,28 +5,14 @@ import { renderAuth } from "../views/user.view.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
 import { requireFound } from "../utils/requireFound.js";
+import type { RegisterBody, LoginBody } from "../validators/auth.validator.js";
 
-interface RegisterBody {
-  email?: string;
-  password?: string;
-  name?: string;
-}
-
-interface LoginBody {
-  email?: string;
-  password?: string;
-}
-
-// POST /api/auth/register
+// POST /api/auth/register (body validated by registerBody)
 export const register = asyncHandler(
   async (req, res) => {
     const { email, password, name } = req.body as RegisterBody;
 
-    if (!email || !password || !name) {
-      throw new HttpError(400, "Email, password, and name are required");
-    }
-
-    const normalizedEmail = String(email).toLowerCase();
+    const normalizedEmail = email.toLowerCase();
 
     // Check if user already exists
     if (userModel.emailExists(normalizedEmail)) {
@@ -46,17 +32,13 @@ export const register = asyncHandler(
   "Failed to register user"
 );
 
-// POST /api/auth/login
+// POST /api/auth/login (body validated by loginBody)
 export const login = asyncHandler(
   async (req, res) => {
     const { email, password } = req.body as LoginBody;
 
-    if (!email || !password) {
-      throw new HttpError(400, "Email and password are required");
-    }
-
     // Find user by email
-    const user = userModel.findWithHashByEmail(String(email).toLowerCase());
+    const user = userModel.findWithHashByEmail(email.toLowerCase());
 
     // Same generic message for unknown email and wrong password.
     if (!user) {

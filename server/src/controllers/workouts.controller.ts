@@ -1,4 +1,4 @@
-import { workoutModel, type MuscleGroupsInput, type WorkoutRow } from "../models/workout.model.js";
+import { workoutModel, type WorkoutRow } from "../models/workout.model.js";
 import { exerciseModel } from "../models/exercise.model.js";
 import { exerciseSetModel } from "../models/exerciseSet.model.js";
 import { exerciseLibraryModel } from "../models/exerciseLibrary.model.js";
@@ -15,31 +15,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
 import { requireUserId } from "../utils/requireUserId.js";
 import { requireFound } from "../utils/requireFound.js";
-
-interface ExerciseLibraryBody {
-  name?: string;
-  muscle_group?: string;
-}
-
-interface WorkoutBody {
-  name?: string;
-  date?: string;
-  notes?: string;
-  completed?: boolean;
-  muscle_groups?: MuscleGroupsInput;
-}
-
-interface ExerciseBody {
-  name?: string;
-  notes?: string;
-}
-
-interface SetBody {
-  weight?: number;
-  reps?: number;
-  completed?: boolean;
-  order_index?: number;
-}
+import type {
+  CreateWorkoutBody,
+  UpdateWorkoutBody,
+  CreateExerciseLibraryBody,
+  CreateExerciseBody,
+  UpdateExerciseBody,
+  CreateSetBody,
+  UpdateSetBody,
+} from "../validators/workouts.validator.js";
 
 // Attach exercises (with their sets) to a workout row and render it.
 function loadWorkout(workout: WorkoutRow): WorkoutResponse {
@@ -70,10 +54,7 @@ export const listExerciseLibrary = asyncHandler(
 // POST /api/workouts/library/exercises — add exercise to library
 export const createExerciseLibrary = asyncHandler(
   async (req, res) => {
-    const { name, muscle_group } = req.body as ExerciseLibraryBody;
-    if (!name) {
-      throw new HttpError(400, "Exercise name is required");
-    }
+    const { name, muscle_group } = req.body as CreateExerciseLibraryBody;
 
     const id = exerciseLibraryModel.create({
       userId: requireUserId(req),
@@ -115,12 +96,8 @@ export const listWorkouts = asyncHandler(
 // POST /api/workouts — create a workout
 export const createWorkout = asyncHandler(
   async (req, res) => {
-    const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
+    const { name, date, notes, completed, muscle_groups } = req.body as CreateWorkoutBody;
     const userId = requireUserId(req);
-
-    if (!name) {
-      throw new HttpError(400, "Workout name is required");
-    }
 
     const id = workoutModel.create({
       userId,
@@ -141,7 +118,7 @@ export const createWorkout = asyncHandler(
 export const updateWorkout = asyncHandler(
   async (req, res) => {
     const { id } = req.params;
-    const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
+    const { name, date, notes, completed, muscle_groups } = req.body as UpdateWorkoutBody;
     const userId = requireUserId(req);
 
     const updated = workoutModel.update({
@@ -183,11 +160,7 @@ export const deleteWorkout = asyncHandler(
 export const addExercise = asyncHandler(
   async (req, res) => {
     const { id: workoutId } = req.params;
-    const { name, notes } = req.body as ExerciseBody;
-
-    if (!name) {
-      throw new HttpError(400, "Exercise name is required");
-    }
+    const { name, notes } = req.body as CreateExerciseBody;
 
     if (!workoutModel.ownsWorkout({ workoutId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
@@ -224,7 +197,7 @@ export const deleteExercise = asyncHandler(
 export const updateExercise = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
-    const { name, notes } = req.body as ExerciseBody;
+    const { name, notes } = req.body as UpdateExerciseBody;
 
     if (!workoutModel.ownsWorkout({ workoutId, userId: requireUserId(req) })) {
       throw new HttpError(404, "Workout not found");
@@ -245,7 +218,7 @@ export const updateExercise = asyncHandler(
 export const addSet = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
-    const { weight, reps, completed, order_index } = req.body as SetBody;
+    const { weight, reps, completed, order_index } = req.body as CreateSetBody;
 
     if (!exerciseModel.ownsExercise({
       exerciseId,
@@ -274,7 +247,7 @@ export const addSet = asyncHandler(
 export const updateSet = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId, setId } = req.params;
-    const { weight, reps, completed, order_index } = req.body as SetBody;
+    const { weight, reps, completed, order_index } = req.body as UpdateSetBody;
 
     if (!exerciseModel.ownsExercise({
       exerciseId,

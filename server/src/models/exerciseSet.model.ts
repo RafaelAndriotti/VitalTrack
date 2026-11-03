@@ -14,10 +14,10 @@ export interface ExerciseSetRow {
 
 export interface CreateSetInput {
   exerciseId: string;
-  weight?: number;
-  reps?: number;
+  weight?: number | null;
+  reps?: number | null;
   completed?: unknown;
-  orderIndex?: number;
+  orderIndex?: number | null;
 }
 
 export interface UpdateSetInput {

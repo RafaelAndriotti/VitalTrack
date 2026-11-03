@@ -41,7 +41,7 @@ export interface WaterDay {
 
 export interface UpsertWaterInput {
   userId: string;
-  date?: string;
+  date?: string | null;
   amountMl?: number;
   goalMl?: number;
 }

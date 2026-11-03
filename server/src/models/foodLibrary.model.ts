@@ -17,11 +17,11 @@ export interface FoodLibraryRow {
 export interface CreateFoodInput {
   userId: string;
   name: string;
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  servingSize?: number;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  servingSize?: number | null;
 }
 
 const selectVisible = db.prepare(

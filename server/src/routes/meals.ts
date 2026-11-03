@@ -12,6 +12,17 @@ import {
   updateMealItem,
   deleteMealItem,
 } from "../controllers/meals.controller.js";
+import { validate } from "../middlewares/validate.js";
+import {
+  idParams,
+  itemParams,
+  listMealsQuery,
+  createFoodLibraryBody,
+  createMealBody,
+  updateMealBody,
+  createMealItemBody,
+  updateMealItemBody,
+} from "../validators/meals.validator.js";
 
 const router = Router();
 
@@ -20,18 +31,22 @@ router.use(authenticate);
 
 // Food library
 router.get("/library/foods", listFoodLibrary);
-router.post("/library/foods", createFoodLibrary);
-router.delete("/library/foods/:id", deleteFoodLibrary);
+router.post("/library/foods", validate({ body: createFoodLibraryBody }), createFoodLibrary);
+router.delete("/library/foods/:id", validate({ params: idParams }), deleteFoodLibrary);
 
 // Meals
-router.get("/", listMeals);
-router.post("/", createMeal);
-router.put("/:id", updateMeal);
-router.delete("/:id", deleteMeal);
+router.get("/", validate({ query: listMealsQuery }), listMeals);
+router.post("/", validate({ body: createMealBody }), createMeal);
+router.put("/:id", validate({ params: idParams, body: updateMealBody }), updateMeal);
+router.delete("/:id", validate({ params: idParams }), deleteMeal);
 
 // Meal items
-router.post("/:id/items", addMealItem);
-router.put("/:id/items/:itemId", updateMealItem);
-router.delete("/:id/items/:itemId", deleteMealItem);
+router.post("/:id/items", validate({ params: idParams, body: createMealItemBody }), addMealItem);
+router.put(
+  "/:id/items/:itemId",
+  validate({ params: itemParams, body: updateMealItemBody }),
+  updateMealItem
+);
+router.delete("/:id/items/:itemId", validate({ params: itemParams }), deleteMealItem);
 
 export default router;

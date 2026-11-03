@@ -40,7 +40,7 @@ const deleteOwned = db.prepare("DELETE FROM meals WHERE id = ? AND user_id = ?")
 export interface CreateMealInput {
   userId: string;
   name: string;
-  date?: string;
+  date?: string | null;
   time?: string | null;
 }
 

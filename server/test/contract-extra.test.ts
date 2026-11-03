@@ -146,7 +146,7 @@ test("key order: water (record and default)", async () => {
   assert.deepEqual(keys(def.body), WATER_DEFAULT_KEYS);
 });
 
-test("numbers sent as strings: SQLite column affinity coerces them", async () => {
+test("numbers sent as strings are rejected with 400 (zod validation)", async () => {
   const w = await api("POST", "/api/workouts", { token: u.token, body: { name: "S" } });
   const e = await api("POST", `/api/workouts/${w.body.id}/exercises`, {
     token: u.token,
@@ -154,48 +154,54 @@ test("numbers sent as strings: SQLite column affinity coerces them", async () =>
   });
   const base = `/api/workouts/${w.body.id}/exercises/${e.body.id}/sets`;
 
+  // Corrigido: numeros como string agora sao 400 (antes o SQLite coagia).
   const s = await api("POST", base, {
     token: u.token,
     body: { weight: "5", reps: "3", order_index: "2" },
   });
-  assert.equal(s.status, 201);
-  assert.equal(s.body.weight, 5);
-  assert.equal(s.body.reps, 3);
-  assert.equal(s.body.order_index, 2);
+  assert.equal(s.status, 400);
+  assert.deepEqual(s.body, { error: "weight must be a number" });
 
-  const upd = await api("PUT", `${base}/${s.body.id}`, { token: u.token, body: { weight: "7" } });
-  assert.equal(upd.status, 200);
-  assert.equal(upd.body.weight, 7);
+  const ok = await api("POST", base, { token: u.token, body: { weight: 5, reps: 3, order_index: 2 } });
+  assert.equal(ok.status, 201);
+  const upd = await api("PUT", `${base}/${ok.body.id}`, { token: u.token, body: { weight: "7" } });
+  assert.equal(upd.status, 400);
+  assert.deepEqual(upd.body, { error: "weight must be a number" });
 
   const m = await api("POST", "/api/meals", { token: u.token, body: { name: "M" } });
   const item = await api("POST", `/api/meals/${m.body.id}/items`, {
     token: u.token,
     body: { name: "I", calories: "100", amount: "50" },
   });
-  assert.equal(item.status, 201);
-  assert.equal(item.body.calories, 100);
-  assert.equal(item.body.amount, 50);
+  assert.equal(item.status, 400);
+  assert.deepEqual(item.body, { error: "amount must be a number" });
 
-  const upItem = await api("PUT", `/api/meals/${m.body.id}/items/${item.body.id}`, {
+  const okItem = await api("POST", `/api/meals/${m.body.id}/items`, {
+    token: u.token,
+    body: { name: "I", calories: 100, amount: 50 },
+  });
+  assert.equal(okItem.status, 201);
+  const upItem = await api("PUT", `/api/meals/${m.body.id}/items/${okItem.body.id}`, {
     token: u.token,
     body: { calories: "200" },
   });
-  assert.equal(upItem.body.calories, 200);
+  assert.equal(upItem.status, 400);
+  assert.deepEqual(upItem.body, { error: "calories must be a number" });
 
-  // Water validates with typeof, so strings are rejected (unlike the above).
+  // Water already rejected strings.
   const water = await api("POST", "/api/water", { token: u.token, body: { amount_ml: "100" } });
   assert.equal(water.status, 400);
   assert.deepEqual(water.body, { error: "amount_ml must be a non-negative number" });
 });
 
-test("completed as the string \"false\" is truthy -> stored as true", async () => {
-  // BUG conhecido: a string "false" e truthy, entao completed vira true.
+test("completed as the string \"false\" is rejected with 400", async () => {
+  // Corrigido: completed so aceita boolean (antes "false" era truthy e virava true).
   const w = await api("POST", "/api/workouts", {
     token: u.token,
     body: { name: "C", completed: "false" },
   });
-  assert.equal(w.status, 201);
-  assert.equal(w.body.completed, true);
+  assert.equal(w.status, 400);
+  assert.deepEqual(w.body, { error: "completed must be a boolean" });
 
   const w2 = await api("POST", "/api/workouts", { token: u.token, body: { name: "C2" } });
   assert.equal(w2.body.completed, false);
@@ -203,8 +209,8 @@ test("completed as the string \"false\" is truthy -> stored as true", async () =
     token: u.token,
     body: { completed: "false" },
   });
-  assert.equal(up.status, 200);
-  assert.equal(up.body.completed, true); // BUG conhecido
+  assert.equal(up.status, 400); // Corrigido: antes 200 com completed=true
+  assert.deepEqual(up.body, { error: "completed must be a boolean" });
 
   const e = await api("POST", `/api/workouts/${w2.body.id}/exercises`, {
     token: u.token,
@@ -212,28 +218,28 @@ test("completed as the string \"false\" is truthy -> stored as true", async () =
   });
   const base = `/api/workouts/${w2.body.id}/exercises/${e.body.id}/sets`;
   const s = await api("POST", base, { token: u.token, body: { completed: "false" } });
-  assert.equal(s.body.completed, true); // BUG conhecido
+  assert.equal(s.status, 400); // Corrigido: antes completed=true
+  assert.deepEqual(s.body, { error: "completed must be a boolean" });
   const s2 = await api("POST", base, { token: u.token, body: {} });
   assert.equal(s2.body.completed, false);
   const su = await api("PUT", `${base}/${s2.body.id}`, {
     token: u.token,
     body: { completed: "false" },
   });
-  assert.equal(su.body.completed, true); // BUG conhecido
+  assert.equal(su.status, 400); // Corrigido: antes completed=true
+  assert.deepEqual(su.body, { error: "completed must be a boolean" });
 });
 
 test("repeated ?date=a&date=b", async () => {
-  // BUG conhecido: query vira array; GET /api/water passa o array ao SQLite
-  // ("Too many parameter values") e responde 500.
+  // Corrigido: date repetido (array) agora e 400 em water e meals
+  // (antes: water 500 "Failed to fetch daily water"; meals 200 ignorando o filtro).
   const water = await api("GET", "/api/water?date=a&date=b", { token: u.token });
-  assert.equal(water.status, 500);
-  assert.deepEqual(water.body, { error: "Failed to fetch daily water" });
+  assert.equal(water.status, 400);
+  assert.deepEqual(water.body, { error: "date must be a valid date in YYYY-MM-DD format" });
 
-  // Meals ignora o filtro quando date nao e string: lista tudo, status 200.
   const meals = await api("GET", "/api/meals?date=a&date=b", { token: u.token });
-  assert.equal(meals.status, 200);
-  const all = await api("GET", "/api/meals", { token: u.token });
-  assert.deepEqual(meals.body, all.body);
+  assert.equal(meals.status, 400);
+  assert.deepEqual(meals.body, { error: "date must be a valid date in YYYY-MM-DD format" });
 });
 
 test("500 logs console.error with the handler label", async (t) => {

@@ -17,10 +17,10 @@ after(async () => {
 
 test("malformed JSON body -> current status/body", async () => {
   const res = await api("POST", "/api/workouts", { token: u.token, raw: '{"name": "x"' });
-  // BUG conhecido: body-parser gera erro 400, mas o errorHandler central
-  // transforma qualquer erro em 500 {"error":"Internal server error"}.
-  assert.equal(res.status, 500);
-  assert.deepEqual(res.body, { error: "Internal server error" });
+  // Corrigido: o errorHandler mapeia entity.parse.failed para 400
+  // (antes: 500 {"error":"Internal server error"}).
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body, { error: "Invalid JSON body" });
   // Nothing created
   const list = await api("GET", "/api/workouts", { token: u.token });
   assert.deepEqual(list.body, []);
@@ -29,9 +29,10 @@ test("malformed JSON body -> current status/body", async () => {
 test("body larger than 100kb -> current status/body", async () => {
   const big = JSON.stringify({ name: "x", notes: "a".repeat(101 * 1024) });
   const res = await api("POST", "/api/workouts", { token: u.token, raw: big });
-  // BUG conhecido: 413 do body-parser vira 500 pelo errorHandler central.
-  assert.equal(res.status, 500);
-  assert.deepEqual(res.body, { error: "Internal server error" });
+  // Corrigido: o errorHandler mapeia entity.too.large para 413
+  // (antes: 500 {"error":"Internal server error"}).
+  assert.equal(res.status, 413);
+  assert.deepEqual(res.body, { error: "Payload too large" });
   const list = await api("GET", "/api/workouts", { token: u.token });
   assert.deepEqual(list.body, []);
 });

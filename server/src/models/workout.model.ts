@@ -20,7 +20,7 @@ export type MuscleGroupsInput = string[] | string | null | undefined;
 export interface CreateWorkoutInput {
   userId: string;
   name: string;
-  date?: string;
+  date?: string | null;
   completed?: unknown;
   notes?: string | null;
   muscleGroups?: MuscleGroupsInput;

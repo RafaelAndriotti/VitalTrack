@@ -135,12 +135,13 @@ test("meal items: add defaults/explicit, validation, 404", async () => {
   assert.equal(e.body.protein, 46.5);
   assert.equal(e.body.fat, 5.4);
 
-  // BUG conhecido: amount 0 vira 100 (uso de || em vez de ??).
+  // Corrigido: amount 0 agora e 400 (antes virava 100 por causa do ||).
   const z = await api("POST", base, { token: u.token, body: { name: "Zero", amount: 0 } });
-  assert.equal(z.body.amount, 100);
+  assert.equal(z.status, 400);
+  assert.deepEqual(z.body, { error: "amount must be greater than 0" });
 
   const stored = (await listMeals()).find((x) => x.id === m.id);
-  assert.equal(stored.meal_items.length, 3);
+  assert.equal(stored.meal_items.length, 2); // Corrigido: o item amount=0 nao e mais criado (era 3)
   assert.deepEqual(stored.meal_items.find((i: any) => i.id === e.body.id), e.body);
 
   const bad = await api("POST", base, { token: u.token, body: { calories: 10 } });
@@ -151,7 +152,7 @@ test("meal items: add defaults/explicit, validation, 404", async () => {
   assert.deepEqual(nf.body, { error: "Meal not found" });
 });
 
-test("meal items: PUT partial, DELETE, 404s, itemId from another meal", async () => {
+test("meal items: PUT partial (amount 0 rejected, same as POST), DELETE, 404s, itemId from another meal", async () => {
   const m = await mkMeal({ name: "ItemsU" });
   const m2 = await mkMeal({ name: "ItemsU2" });
   const it = (await api("POST", `/api/meals/${m.id}/items`, {
@@ -167,9 +168,14 @@ test("meal items: PUT partial, DELETE, 404s, itemId from another meal", async ()
   assert.equal(r1.body.amount, 50);
   assert.equal(r1.body.protein, 4);
 
-  // 0 is honored on update (?? not ||)
-  const r2 = await api("PUT", base, { token: u.token, body: { amount: 0, fat: 0, name: "Pao2" } });
-  assert.equal(r2.body.amount, 0);
+  // Corrigido: regra igual ao POST (amount deve ser > 0 no update)
+  const rBad = await api("PUT", base, { token: u.token, body: { amount: 0, fat: 0, name: "Pao2" } });
+  assert.equal(rBad.status, 400);
+  assert.equal(rBad.body.error, "amount must be greater than 0");
+
+  // 0 is still honored on update for the other fields (?? not ||)
+  const r2 = await api("PUT", base, { token: u.token, body: { fat: 0, name: "Pao2" } });
+  assert.equal(r2.body.amount, 50);
   assert.equal(r2.body.fat, 0);
   assert.equal(r2.body.name, "Pao2");
   assert.equal(r2.body.carbs, 25);
