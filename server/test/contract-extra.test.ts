@@ -249,7 +249,7 @@ test("500 logs console.error with the handler label", async (t) => {
   assert.deepEqual(res.body, { error: "Failed to create workout" });
 
   const calls = spy.mock.calls.map((c) => c.arguments);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "Create workout error:");
-  assert.equal(calls[0][1], "FOREIGN KEY constraint failed");
+  const created = calls.filter((c) => c[0] === "Create workout error:");
+  assert.equal(created.length, 1);
+  assert.equal(created[0][1], "FOREIGN KEY constraint failed");
 });

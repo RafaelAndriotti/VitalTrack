@@ -248,10 +248,10 @@ export const addSet = asyncHandler(
     const { weight, reps, completed, order_index } = req.body as SetBody;
 
     if (!exerciseModel.ownsExercise({
-        exerciseId,
-        workoutId,
-        userId: requireUserId(req),
-      })) {
+      exerciseId,
+      workoutId,
+      userId: requireUserId(req),
+    })) {
       throw new HttpError(404, "Exercise not found");
     }
 
@@ -277,10 +277,10 @@ export const updateSet = asyncHandler(
     const { weight, reps, completed, order_index } = req.body as SetBody;
 
     if (!exerciseModel.ownsExercise({
-        exerciseId,
-        workoutId,
-        userId: requireUserId(req),
-      })) {
+      exerciseId,
+      workoutId,
+      userId: requireUserId(req),
+    })) {
       throw new HttpError(404, "Set not found");
     }
 
@@ -310,10 +310,10 @@ export const deleteSet = asyncHandler(
     const { id: workoutId, exerciseId, setId } = req.params;
 
     if (!exerciseModel.ownsExercise({
-        exerciseId,
-        workoutId,
-        userId: requireUserId(req),
-      })) {
+      exerciseId,
+      workoutId,
+      userId: requireUserId(req),
+    })) {
       throw new HttpError(404, "Set not found");
     }
 

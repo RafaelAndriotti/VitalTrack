@@ -33,7 +33,7 @@ export interface UpdateMealItemInput extends MealItemFields {
   mealId: string;
 }
 
-const selectByMeal =db.prepare(
+const selectByMeal = db.prepare(
   "SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC"
 );
 const selectById = db.prepare("SELECT * FROM meal_items WHERE id = ?");

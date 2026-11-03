@@ -27,4 +27,8 @@ const res = spawnSync(process.execPath, ["--import", "tsx", "--test", ...files],
   cwd: root,
   stdio: "inherit",
 });
+if (res.error) {
+  console.error(`Failed to run tests: ${res.error.message}`);
+  process.exit(1);
+}
 process.exit(res.status ?? 1);
