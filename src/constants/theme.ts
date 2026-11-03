@@ -1,14 +1,18 @@
 /*
-  ── VitalTrack · Direction contract (Clean Clínico / A) ──────────────────────
-  THESIS: A calm health instrument. Data is the hero; color is earned, not sprayed.
-          Refuses the neon-on-black, glassmorphism, all-pill AI-template look.
-  OWN-WORLD: Warm graphite ground (#0E1214), SOLID surfaces with hairline borders
-          (no translucent glass), a single vital-green accent (#3E8E7E) reserved for
-          progress + primary action, calm radii (cards 14, pills only on buttons/chips),
-          soft real shadows (offset + blur, never colored glow). Poppins, normal case,
-          weight ≤700. Secondary text tinted, never pure gray on color.
+  ── VitalTrack · Direction contract (Vital Natural / B) ─────────────────────
+  THESIS: A calm health instrument with a colour per domain. Data is the hero;
+          each domain owns one hue so the day reads at a glance.
+  OWN-WORLD: Warm graphite ground (#0E1214), SOLID surfaces separated by a tone
+          step plus a hairline (no glass, no shadow on resting cards). Three
+          domain hues, all desaturated — sage green for training, muted steel
+          blue for hydration, soft amber for nutrition. Poppins, normal case,
+          weight ≤700.
+  REFUSES: neon-on-black (#A3E635 lime, #60A5FA, #FBBF24 at full chroma),
+          glow, glass, gradients. The reference palette is kept as HUES, their
+          chroma pulled down so the app reads natural instead of generated.
+  SIGNATURE: "O dia em três anéis" — training, nutrition and hydration as
+          concentric arcs on the home screen, each in its own hue.
   STORY: The user opens the app, reads their day at a glance, and logs with one tap.
-  FIRST VIEWPORT: (per surface) data legible first; accent marks only what matters now.
   FORM: user-pinned direction (concept roll skipped — pinned beats the roll).
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
           review, the verdict, and DESIGN.md.
@@ -16,40 +20,47 @@
 */
 
 export const Colors = {
-  // Accent — vital green, used only for progress + primary action.
-  primary: '#3E8E7E',
-  primaryDark: '#2F6E61',
-  primaryLight: '#5AA697',
-  primarySoft: 'rgba(62, 142, 126, 0.14)', // tinted fill for accent chips/rows
-  primaryBorder: 'rgba(62, 142, 126, 0.40)',
+  // Accent — training / primary action. Sage green: the reference lime, naturalised.
+  primary: '#8FB255',
+  primaryDark: '#6F8E40',
+  primaryLight: '#A6C470',
+  primarySoft: 'rgba(143, 178, 85, 0.14)', // tinted fill for accent chips/rows
+  primaryBorder: 'rgba(143, 178, 85, 0.40)',
 
   // Ground + solid surfaces (no glass).
   background: '#0E1214', // warm graphite, not pure black
-  surface: '#161C1E', // card
-  surfaceAlt: '#1D2529', // raised / input / lighter panel
-  surfaceLight: '#1D2529', // legacy alias
-  border: '#28312F', // solid hairline
-  borderStrong: '#35403D',
+  surface: '#161B1D', // card
+  surfaceAlt: '#1E2528', // raised / input / lighter panel
+  surfaceLight: '#1E2528', // legacy alias
+  border: '#262E30', // solid hairline
+  borderStrong: '#343E40',
 
   // Text — soft, tinted toward the ground, never pure white/gray.
-  text: '#ECEFEE',
-  textSecondary: '#9EA9A5',
-  textMuted: '#6B7570',
-  textInverted: '#08110F', // dark text on accent surfaces
+  text: '#E9EDEB',
+  textSecondary: '#9BA5A2',
+  textMuted: '#6A7471',
+  textInverted: '#0C1108', // dark text on accent surfaces
 
   // Semantic — desaturated, not signal-neon.
-  success: '#4C9A6E',
-  warning: '#C9964B',
-  danger: '#C55B52',
-  dangerSoft: 'rgba(197, 91, 82, 0.14)',
-  dangerBorder: 'rgba(197, 91, 82, 0.40)',
+  success: '#6F9E63',
+  warning: '#C2924A',
+  danger: '#C05C52',
+  dangerSoft: 'rgba(192, 92, 82, 0.14)',
+  dangerBorder: 'rgba(192, 92, 82, 0.40)',
 
-  // Data hues — muted, for macro / hydration viz.
-  water: '#5C9CC4',
-  waterSoft: 'rgba(92, 156, 196, 0.14)',
-  protein: '#6E9CC9',
-  carbs: '#9CB36B',
-  fat: '#C99A6E',
+  // Domain hues — one per area, low chroma.
+  water: '#6E9AC2', // hydration, naturalised from #60A5FA
+  waterSoft: 'rgba(110, 154, 194, 0.14)',
+  nutrition: '#C79A4E', // calories, naturalised from #FBBF24
+  nutritionSoft: 'rgba(199, 154, 78, 0.14)',
+
+  // Macro hues — inside the nutrition family, kept apart but quiet.
+  protein: '#C08E54',
+  carbs: '#93A868',
+  fat: '#B07C62',
+
+  // Rings and tracks.
+  track: '#232A2C',
 
   white: '#FFFFFF',
 } as const;
@@ -77,8 +88,8 @@ export const FontSize = {
 export const BorderRadius = {
   sm: 8,
   md: 10,
-  lg: 14,
-  xl: 18,
+  lg: 16,
+  xl: 20,
   full: 9999,
 } as const;
 
@@ -97,19 +108,14 @@ export const Icon = {
   lg: 24,
 } as const;
 
-// Soft, real elevation — offset + blur, neutral shadow (never a colored glow).
+// Elevation is for what floats (sheets, dialogs). Resting cards use a tone
+// step and a hairline instead — never a shadow and a border together.
 export const Elevation = {
-  card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 3,
-  },
+  card: {},
   raised: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.32,
     shadowRadius: 20,
     elevation: 6,
   },

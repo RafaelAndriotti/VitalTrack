@@ -1,4 +1,6 @@
 export { Screen, Loading, Card, ProgressBar } from './layout';
+export { Ring } from './Ring';
+export type { RingArc } from './Ring';
 export { ErrorBanner, EmptyState } from './feedback';
 export { Button } from './Button';
 export { Input, FormField, MaxLength } from './Input';

@@ -13,10 +13,9 @@ interface PresetGridProps {
 export function PresetGrid({ amount, goal, onAdd }: PresetGridProps) {
   return (
     <Card style={styles.card}>
-      <Text style={styles.sectionLabel}>Adicionar</Text>
+      <Text style={styles.sectionLabel}>Registrar um recipiente</Text>
       <View style={styles.grid}>
         {RECIPIENTES.map((r) => {
-          const iconSize = r.ml >= 500 ? 28 : 22;
           // Recipiente que estouraria a meta fica desabilitado; para usá-lo,
           // o usuário aumenta a meta.
           const exceeds = amount + r.ml > goal;
@@ -24,13 +23,15 @@ export function PresetGrid({ amount, goal, onAdd }: PresetGridProps) {
             <Pressable
               key={r.ml}
               accessibilityRole="button"
-              style={[styles.btn, exceeds && styles.btnDisabled]}
+              accessibilityLabel={`${r.label}, ${r.ml} mililitros`}
+              accessibilityState={{ disabled: exceeds }}
+              style={({ pressed }) => [styles.btn, pressed && styles.pressed, exceeds && styles.btnDisabled]}
               disabled={exceeds}
               onPress={() => onAdd(r.ml)}
             >
-              <r.icon size={iconSize} color={Colors.water} strokeWidth={Icon.stroke} />
-              <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
+              <r.icon size={Icon.md} color={Colors.textSecondary} strokeWidth={Icon.stroke} />
               <Text style={styles.ml}>{r.ml} ml</Text>
+              <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
             </Pressable>
           );
         })}
@@ -41,23 +42,31 @@ export function PresetGrid({ amount, goal, onAdd }: PresetGridProps) {
 
 const styles = StyleSheet.create({
   card: { gap: Spacing.md },
-  sectionLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: Font.medium },
+  sectionLabel: { fontSize: FontSize.md, color: Colors.text, fontFamily: Font.semibold },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   btn: {
     flexGrow: 1,
     flexBasis: '30%',
     minWidth: 96,
+    minHeight: 76,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.waterSoft,
+    gap: 2,
+    backgroundColor: Colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: 'rgba(92, 156, 196, 0.40)',
+    borderColor: Colors.border,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.sm,
   },
+  pressed: { opacity: 0.8 },
   btnDisabled: { opacity: 0.4 },
-  name: { color: Colors.water, fontFamily: Font.semibold, fontSize: FontSize.sm },
-  ml: { color: Colors.textSecondary, fontFamily: Font.medium, fontSize: FontSize.xs },
+  ml: {
+    color: Colors.text,
+    fontFamily: Font.semibold,
+    fontSize: FontSize.md,
+    fontVariant: ['tabular-nums'],
+    marginTop: Spacing.xs,
+  },
+  name: { color: Colors.textMuted, fontFamily: Font.regular, fontSize: FontSize.xs },
 });

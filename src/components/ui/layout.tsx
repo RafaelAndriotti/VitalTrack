@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import type { ViewStyle, StyleProp } from 'react-native';
 import { Colors, Spacing, BorderRadius, Elevation } from '@/constants/theme';
 
-/* Primitivos de layout do Clean Clínico — superfícies sólidas, raios calmos,
-   sombras suaves e um único acento verde. Sem vidro, sem neon. */
+/* Primitivos de layout do Vital Natural — superfícies sólidas separadas por um
+   degrau de tom mais fio de 1px, uma cor por domínio. Sem vidro, sem neon,
+   sem sombra em card parado. */
 
 interface ScreenProps {
   children: ReactNode;
@@ -47,7 +48,7 @@ export function ProgressBar({
   value,
   max,
   color = Colors.primary,
-  track = Colors.surfaceAlt,
+  track = Colors.track,
   height = 8,
 }: {
   value: number;

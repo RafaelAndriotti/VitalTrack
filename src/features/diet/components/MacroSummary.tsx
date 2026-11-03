@@ -1,17 +1,20 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { Card, ProgressBar } from '@/components/ui';
+import { Card, Ring } from '@/components/ui';
 import { CALORIE_GOAL, PROTEIN_GOAL, CARBS_GOAL, FAT_GOAL } from '@/features/diet/constants';
 import { Colors, Spacing, FontSize, Font } from '@/constants/theme';
 import type { Meal } from '@/types';
 
-function MacroCol({ label, grams, goal, color }: { label: string; grams: number; goal: number; color: string }) {
+const br = (n: number) => n.toLocaleString('pt-BR');
+
+function MacroRing({ label, grams, goal, color }: { label: string; grams: number; goal: number; color: string }) {
   return (
-    <View style={styles.macroCol}>
-      <View style={styles.macroInfo}>
-        <Text style={styles.macroGram}>{grams.toFixed(0)}g</Text>
-        <Text style={styles.macroLabel}>{label}</Text>
-      </View>
-      <ProgressBar value={grams} max={goal} color={color} height={6} />
+    <View style={styles.macro}>
+      <Ring arcs={[{ value: grams, max: goal, color, label }]} size={76} stroke={7}>
+        <Text style={styles.macroGram}>{grams.toFixed(0)}</Text>
+        <Text style={styles.macroUnit}>g</Text>
+      </Ring>
+      <Text style={styles.macroLabel}>{label}</Text>
+      <Text style={styles.macroGoal}>de {goal} g</Text>
     </View>
   );
 }
@@ -20,39 +23,67 @@ export function MacroSummary({ meals }: { meals: Meal[] }) {
   const items = meals.flatMap((m) => m.meal_items || []);
   const sum = (pick: (i: (typeof items)[number]) => number) =>
     items.reduce((total, item) => total + Number(pick(item)), 0);
-  const totalCalories = sum((i) => i.calories);
+
+  const calories = sum((i) => i.calories);
+  const remaining = CALORIE_GOAL - calories;
 
   return (
-    <Card style={{ gap: Spacing.md }}>
-      <View style={styles.calorieRow}>
-        <View style={styles.calorieValueRow}>
-          <Text style={styles.calorieValue}>{totalCalories.toLocaleString('pt-BR')}</Text>
-          <Text style={styles.calorieUnit}>/ {CALORIE_GOAL.toLocaleString('pt-BR')} kcal</Text>
-        </View>
-        <Text style={styles.calorieLabel}>Consumidas hoje</Text>
-      </View>
+    <Card style={styles.card}>
+      <Ring
+        arcs={[{ value: calories, max: CALORIE_GOAL, color: Colors.nutrition, label: 'Calorias' }]}
+        size={184}
+        stroke={14}
+      >
+        <Text style={styles.calories}>{br(calories)}</Text>
+        <Text style={styles.caloriesUnit}>kcal de {br(CALORIE_GOAL)}</Text>
+      </Ring>
 
-      <ProgressBar value={totalCalories} max={CALORIE_GOAL} color={Colors.primary} height={12} />
+      <Text style={styles.finding}>
+        {remaining > 0
+          ? `Faltam ${br(remaining)} kcal para a meta do dia`
+          : remaining === 0
+            ? 'Meta do dia atingida'
+            : `${br(Math.abs(remaining))} kcal acima da meta do dia`}
+      </Text>
 
       <View style={styles.macrosRow}>
-        <MacroCol label="Proteína" grams={sum((i) => i.protein)} goal={PROTEIN_GOAL} color={Colors.protein} />
-        <MacroCol label="Carbos" grams={sum((i) => i.carbs)} goal={CARBS_GOAL} color={Colors.carbs} />
-        <MacroCol label="Gordura" grams={sum((i) => i.fat)} goal={FAT_GOAL} color={Colors.fat} />
+        <MacroRing label="Proteína" grams={sum((i) => i.protein)} goal={PROTEIN_GOAL} color={Colors.protein} />
+        <MacroRing label="Carboidrato" grams={sum((i) => i.carbs)} goal={CARBS_GOAL} color={Colors.carbs} />
+        <MacroRing label="Gordura" grams={sum((i) => i.fat)} goal={FAT_GOAL} color={Colors.fat} />
       </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  calorieRow: { gap: 2 },
-  calorieValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.xs },
-  calorieValue: { fontSize: FontSize.display, fontFamily: Font.bold, color: Colors.text, letterSpacing: -1 },
-  calorieUnit: { fontSize: FontSize.md, color: Colors.textSecondary, fontFamily: Font.medium },
-  calorieLabel: { fontSize: FontSize.sm, color: Colors.textMuted, fontFamily: Font.medium },
+  card: { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg },
 
-  macrosRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs },
-  macroCol: { flex: 1, gap: Spacing.xs },
-  macroInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  macroGram: { fontSize: FontSize.md, fontFamily: Font.semibold, color: Colors.text },
-  macroLabel: { fontSize: FontSize.xs, color: Colors.textMuted, fontFamily: Font.medium },
+  calories: {
+    fontSize: FontSize.xxl,
+    fontFamily: Font.bold,
+    color: Colors.text,
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  caloriesUnit: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: Font.medium, marginTop: 2 },
+
+  finding: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: Font.medium, textAlign: 'center' },
+
+  macrosRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  macro: { flex: 1, alignItems: 'center', gap: 2 },
+  macroGram: {
+    fontSize: FontSize.md,
+    fontFamily: Font.semibold,
+    color: Colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  macroUnit: { fontSize: 11, color: Colors.textMuted, fontFamily: Font.medium, marginTop: -2 },
+  macroLabel: { fontSize: FontSize.sm, color: Colors.text, fontFamily: Font.medium, marginTop: Spacing.xs },
+  macroGoal: { fontSize: FontSize.xs, color: Colors.textMuted, fontFamily: Font.regular },
 });

@@ -9,6 +9,7 @@ import type { Workout, Meal, DailyWater } from '@/types';
 
 export function useHomeData() {
   const [active, setActive] = useState<Workout | null>(null);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [daily, setDaily] = useState<DailyWater | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ export function useHomeData() {
         waterApi.get(date),
       ]);
       setActive(workoutList.find((w) => !w.completed) || null);
+      setWorkouts(workoutList);
       setMeals(mealList);
       setDaily(waterData);
     } catch (err) {
@@ -46,5 +48,5 @@ export function useHomeData() {
     void refetch();
   }, [refetch]);
 
-  return { active, meals, daily, loading, refreshing, error, refresh };
+  return { active, workouts, meals, daily, loading, refreshing, error, refresh };
 }

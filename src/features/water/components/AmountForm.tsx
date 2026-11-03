@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { Minus } from 'lucide-react-native';
 import { Card } from '@/components/ui';
-import { Colors, Spacing, FontSize, BorderRadius, Font, Icon } from '@/constants/theme';
+import { Colors, Spacing, FontSize, BorderRadius, Font } from '@/constants/theme';
 
 function parseMl(value: string): number | null {
   const num = parseInt(value, 10);
@@ -11,41 +10,53 @@ function parseMl(value: string): number | null {
 }
 
 interface AmountFormProps {
-  title: string;
-  buttonLabel: string;
-  /** Mostra o ícone de "menos" no botão (modo remover). */
-  subtract?: boolean;
+  /** Recebe a quantidade com sinal: positiva adiciona, negativa remove. */
   onSubmit: (ml: number) => void;
 }
 
-/** Campo + botão para adicionar ou remover uma quantidade livre de água. */
-export function AmountForm({ title, buttonLabel, subtract = false, onSubmit }: AmountFormProps) {
+/** Uma quantidade livre, adicionada ou removida pelo mesmo campo. */
+export function AmountForm({ onSubmit }: AmountFormProps) {
   const [value, setValue] = useState('');
+  const ml = parseMl(value);
 
-  function submit() {
-    const ml = parseMl(value);
-    if (ml !== null) onSubmit(ml);
+  function submit(sign: 1 | -1) {
+    if (ml !== null) onSubmit(ml * sign);
     setValue('');
   }
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.label}>{title}</Text>
+      <Text style={styles.label}>Outra quantidade</Text>
       <View style={styles.row}>
         <TextInput
           style={styles.input}
+          accessibilityLabel="Quantidade em mililitros"
           placeholder="ml"
           placeholderTextColor={Colors.textMuted}
           keyboardType="numeric"
           value={value}
           onChangeText={setValue}
           returnKeyType="done"
-          onSubmitEditing={submit}
+          onSubmitEditing={() => submit(1)}
           maxLength={5}
         />
-        <Pressable accessibilityRole="button" style={subtract ? styles.removeBtn : styles.addBtn} onPress={submit}>
-          {subtract ? <Minus size={Icon.sm} color={Colors.textSecondary} strokeWidth={Icon.stroke} /> : null}
-          <Text style={subtract ? styles.removeText : styles.addText}>{buttonLabel}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: ml === null }}
+          disabled={ml === null}
+          style={({ pressed }) => [styles.btn, styles.removeBtn, pressed && styles.pressed, ml === null && styles.disabled]}
+          onPress={() => submit(-1)}
+        >
+          <Text style={styles.removeText}>Remover</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: ml === null }}
+          disabled={ml === null}
+          style={({ pressed }) => [styles.btn, styles.addBtn, pressed && styles.pressed, ml === null && styles.disabled]}
+          onPress={() => submit(1)}
+        >
+          <Text style={styles.addText}>Adicionar</Text>
         </Pressable>
       </View>
     </Card>
@@ -54,37 +65,33 @@ export function AmountForm({ title, buttonLabel, subtract = false, onSubmit }: A
 
 const styles = StyleSheet.create({
   card: { gap: Spacing.sm },
-  label: { fontSize: FontSize.sm, color: Colors.textSecondary, fontFamily: Font.medium },
+  label: { fontSize: FontSize.md, color: Colors.text, fontFamily: Font.semibold },
   row: { flexDirection: 'row', gap: Spacing.sm },
   input: {
     flex: 1,
+    minWidth: 72,
     backgroundColor: Colors.surfaceAlt,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     height: 48,
     color: Colors.text,
     fontSize: FontSize.md,
     fontFamily: Font.medium,
+    fontVariant: ['tabular-nums'],
   },
-  addBtn: {
-    backgroundColor: Colors.primary,
+  btn: {
+    height: 48,
     borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     justifyContent: 'center',
-  },
-  addText: { color: Colors.textInverted, fontFamily: Font.semibold, fontSize: FontSize.sm },
-  removeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.lg,
-    justifyContent: 'center',
   },
+  pressed: { opacity: 0.8 },
+  disabled: { opacity: 0.45 },
+  addBtn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  addText: { color: Colors.textInverted, fontFamily: Font.semibold, fontSize: FontSize.sm },
+  removeBtn: { backgroundColor: Colors.surfaceAlt, borderColor: Colors.border },
   removeText: { color: Colors.textSecondary, fontFamily: Font.semibold, fontSize: FontSize.sm },
 });

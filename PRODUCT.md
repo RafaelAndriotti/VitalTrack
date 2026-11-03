@@ -48,6 +48,15 @@ Serves two goals with equal weight: a portfolio-grade demonstration of craft (UI
 - Typeface: **Poppins** (`@expo-google-fonts`) — in use across the app.
 - Icon set: `lucide-react-native`.
 - Dark base color present in identity: `#0F172A` (Android adaptive icon background); `userInterfaceStyle` is `automatic`.
+- Direction: **Vital Natural** (contract at the top of `src/constants/theme.ts`). Warm graphite ground
+  `#0E1214`; one hue per domain, all desaturated — training/primary `#8FB255`, hydration `#6E9AC2`,
+  nutrition `#C79A4E`. The hues come from the neon reference palette (lime `#A3E635`, blue `#60A5FA`,
+  amber `#FBBF24`) with the chroma pulled down: the app must read natural, never neon-on-black.
+- Refused, by the owner's decision: neon accents, glow, glass, gradients, shadows on resting cards.
+  Surfaces separate by a tone step plus a 1px hairline.
+- Signature element: **"o dia em três anéis"** — training, nutrition and hydration as concentric arcs
+  on the home screen (`src/components/ui/Ring.tsx`, `src/features/home/components/DayRings.tsx`), one
+  hue each. The same ring carries the single figure on the diet and hydration screens.
 
 ## Evidence on Hand
 

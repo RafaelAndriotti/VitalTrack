@@ -20,8 +20,7 @@ export function WaterScreen() {
         onGoalCommit={commitGoal}
       />
       <PresetGrid amount={amount} goal={goal} onAdd={addWater} />
-      <AmountForm title="Outra quantidade" buttonLabel="Adicionar" onSubmit={(ml) => addWater(ml)} />
-      <AmountForm title="Remover quantidade" buttonLabel="Remover" subtract onSubmit={(ml) => addWater(-ml)} />
+      <AmountForm onSubmit={addWater} />
     </Screen>
   );
 }
