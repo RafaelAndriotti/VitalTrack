@@ -1,360 +1,245 @@
-import { Response } from "express";
-import { randomUUID } from "node:crypto";
-import { AuthRequest } from "../middlewares/auth.js";
-import { db } from "../config/db.js";
+import { mealModel, type MealRow } from "../models/meal.model.js";
+import { mealItemModel } from "../models/mealItem.model.js";
+import { foodLibraryModel } from "../models/foodLibrary.model.js";
+import {
+  renderMeal,
+  renderMealItem,
+  renderFoodLibrary,
+  renderFoodLibraryEntry,
+  type MealResponse,
+} from "../views/meal.view.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { HttpError } from "../utils/httpError.js";
+import { today } from "../utils/date.js";
+
+interface FoodLibraryBody {
+  name?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  serving_size?: number;
+}
+
+interface MealBody {
+  name?: string;
+  date?: string;
+  time?: string;
+}
+
+interface MealItemBody {
+  name?: string;
+  amount?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+function loadMeal(meal: MealRow): MealResponse {
+  return renderMeal(meal, mealItemModel.listByMeal(meal.id));
+}
 
 // Load a meal with its items, scoped to the owner. Returns undefined if the
 // meal does not belong to the user (used both for reads and 404s).
-function getMealWithItems(mealId: string, userId: string) {
-  const meal = db
-    .prepare("SELECT * FROM meals WHERE id = ? AND user_id = ?")
-    .get(mealId, userId) as Record<string, unknown> | undefined;
-  if (!meal) return undefined;
-  meal.meal_items = db
-    .prepare("SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC")
-    .all(mealId);
-  return meal;
+function getMealWithItems(mealId: string, userId: string): MealResponse | undefined {
+  const meal = mealModel.findOwned(mealId, userId);
+  return meal ? loadMeal(meal) : undefined;
 }
 
 // GET /api/meals/library/foods — list global and user's food
-export async function listFoodLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const data = db
-      .prepare(
-        `SELECT * FROM food_library
-         WHERE user_id = ? OR user_id IS NULL
-         ORDER BY name ASC`
-      )
-      .all(req.userId!);
-    res.json(data);
-  } catch (err) {
-    console.error("List food library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to fetch food library" });
-  }
-}
+export const listFoodLibrary = asyncHandler(
+  async (req, res) => {
+    const data = foodLibraryModel.listVisibleToUser(req.userId!);
+    res.json(renderFoodLibrary(data));
+  },
+  "List food library error",
+  "Failed to fetch food library"
+);
 
 // POST /api/meals/library/foods — add food to library
-export async function createFoodLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const { name, calories, protein, carbs, fat, serving_size } = req.body;
+export const createFoodLibrary = asyncHandler(
+  async (req, res) => {
+    const { name, calories, protein, carbs, fat, serving_size } =
+      req.body as FoodLibraryBody;
     if (!name) {
-      res.status(400).json({ error: "Food name is required" });
-      return;
+      throw new HttpError(400, "Food name is required");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO food_library (id, user_id, name, calories, protein, carbs, fat, serving_size)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      id,
-      req.userId!,
+    const id = foodLibraryModel.create({
+      userId: req.userId!,
       name,
-      calories || 0,
-      protein || 0,
-      carbs || 0,
-      fat || 0,
-      serving_size || 100
-    );
+      calories,
+      protein,
+      carbs,
+      fat,
+      servingSize: serving_size,
+    });
 
-    const data = db.prepare("SELECT * FROM food_library WHERE id = ?").get(id);
-    res.status(201).json(data);
-  } catch (err) {
-    console.error("Create food library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to create food in library" });
-  }
-}
+    const data = foodLibraryModel.findById(id)!;
+    res.status(201).json(renderFoodLibraryEntry(data));
+  },
+  "Create food library error",
+  "Failed to create food in library"
+);
 
 // DELETE /api/meals/library/foods/:id — delete user's food
-export async function deleteFoodLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteFoodLibrary = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
 
-    const info = db
-      .prepare("DELETE FROM food_library WHERE id = ? AND user_id = ?")
-      .run(id, req.userId!);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Food not found or cannot be deleted" });
-      return;
+    // Only allow deleting user's own foods (user_id = ? excludes globals)
+    if (!foodLibraryModel.deleteOwned(id, req.userId!)) {
+      throw new HttpError(404, "Food not found or cannot be deleted");
     }
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete food library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete food from library" });
-  }
-}
+  },
+  "Delete food library error",
+  "Failed to delete food from library"
+);
 
 // GET /api/meals — list user's meals with meal items (optional ?date=YYYY-MM-DD filter)
-export async function listMeals(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const listMeals = asyncHandler(
+  async (req, res) => {
     const { date } = req.query;
 
-    const meals = (
-      date && typeof date === "string"
-        ? db
-            .prepare(
-              "SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at ASC"
-            )
-            .all(req.userId!, date)
-        : db
-            .prepare(
-              "SELECT * FROM meals WHERE user_id = ? ORDER BY created_at ASC"
-            )
-            .all(req.userId!)
-    ) as Record<string, unknown>[];
-
-    const itemStmt = db.prepare(
-      "SELECT * FROM meal_items WHERE meal_id = ? ORDER BY created_at ASC"
+    const meals = mealModel.listByUser(
+      req.userId!,
+      date && typeof date === "string" ? date : undefined
     );
-    for (const meal of meals) {
-      meal.meal_items = itemStmt.all(meal.id as string);
-    }
 
-    res.json(meals);
-  } catch (err) {
-    console.error("List meals error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to fetch meals" });
-  }
-}
+    res.json(meals.map(loadMeal));
+  },
+  "List meals error",
+  "Failed to fetch meals"
+);
 
 // POST /api/meals — create a meal
-export async function createMeal(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const { name, date, time } = req.body;
+export const createMeal = asyncHandler(
+  async (req, res) => {
+    const { name, date, time } = req.body as MealBody;
 
     if (!name) {
-      res.status(400).json({ error: "Meal name is required" });
-      return;
+      throw new HttpError(400, "Meal name is required");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      "INSERT INTO meals (id, user_id, name, date, time) VALUES (?, ?, ?, ?, ?)"
-    ).run(
-      id,
-      req.userId!,
-      name,
-      date || new Date().toISOString().split("T")[0],
-      time || null
-    );
+    const id = mealModel.create(req.userId!, name, date || today(), time);
 
     res.status(201).json(getMealWithItems(id, req.userId!));
-  } catch (err) {
-    console.error("Create meal error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to create meal" });
-  }
-}
+  },
+  "Create meal error",
+  "Failed to create meal"
+);
 
 // PUT /api/meals/:id — update a meal
-export async function updateMeal(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const updateMeal = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
-    const { name, date, time } = req.body;
+    const { name, date, time } = req.body as MealBody;
 
-    // Partial update: keep current column value when the client omits a field.
-    const info = db
-      .prepare(
-        `UPDATE meals
-         SET name = COALESCE(@name, name),
-             date = COALESCE(@date, date),
-             time = COALESCE(@time, time)
-         WHERE id = @id AND user_id = @user_id`
-      )
-      .run({
-        id,
-        user_id: req.userId!,
-        name: name ?? null,
-        date: date ?? null,
-        time: time ?? null,
-      });
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Meal not found" });
-      return;
+    if (!mealModel.update(id, req.userId!, name, date, time)) {
+      throw new HttpError(404, "Meal not found");
     }
 
     res.json(getMealWithItems(id, req.userId!));
-  } catch (err) {
-    console.error("Update meal error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to update meal" });
-  }
-}
+  },
+  "Update meal error",
+  "Failed to update meal"
+);
 
 // DELETE /api/meals/:id — delete a meal
-export async function deleteMeal(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteMeal = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
 
-    const info = db
-      .prepare("DELETE FROM meals WHERE id = ? AND user_id = ?")
-      .run(id, req.userId!);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Meal not found" });
-      return;
+    if (!mealModel.delete(id, req.userId!)) {
+      throw new HttpError(404, "Meal not found");
     }
 
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete meal error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete meal" });
-  }
-}
+  },
+  "Delete meal error",
+  "Failed to delete meal"
+);
 
 // POST /api/meals/:id/items — add food item to meal
-export async function addMealItem(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const addMealItem = asyncHandler(
+  async (req, res) => {
     const { id: mealId } = req.params;
-    const { name, amount, calories, protein, carbs, fat } = req.body;
+    const { name, amount, calories, protein, carbs, fat } = req.body as MealItemBody;
 
     if (!name) {
-      res.status(400).json({ error: "Food name is required" });
-      return;
+      throw new HttpError(400, "Food name is required");
     }
 
     // Verify ownership
-    const meal = db
-      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
-      .get(mealId, req.userId!);
-
-    if (!meal) {
-      res.status(404).json({ error: "Meal not found" });
-      return;
+    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+      throw new HttpError(404, "Meal not found");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO meal_items (id, meal_id, name, amount, calories, protein, carbs, fat)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      id,
-      mealId,
+    const id = mealItemModel.create(mealId, {
       name,
-      amount || 100,
-      calories || 0,
-      protein || 0,
-      carbs || 0,
-      fat || 0
-    );
+      amount,
+      calories,
+      protein,
+      carbs,
+      fat,
+    });
 
-    const data = db.prepare("SELECT * FROM meal_items WHERE id = ?").get(id);
-    res.status(201).json(data);
-  } catch (err) {
-    console.error("Add food item error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to add food item" });
-  }
-}
+    const data = mealItemModel.findById(id)!;
+    res.status(201).json(renderMealItem(data));
+  },
+  "Add food item error",
+  "Failed to add food item"
+);
 
 // PUT /api/meals/:id/items/:itemId — update food item
-export async function updateMealItem(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const updateMealItem = asyncHandler(
+  async (req, res) => {
     const { id: mealId, itemId } = req.params;
-    const { name, amount, calories, protein, carbs, fat } = req.body;
+    const { name, amount, calories, protein, carbs, fat } = req.body as MealItemBody;
 
     // Verify ownership
-    const meal = db
-      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
-      .get(mealId, req.userId!);
-
-    if (!meal) {
-      res.status(404).json({ error: "Meal not found" });
-      return;
+    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+      throw new HttpError(404, "Meal not found");
     }
 
-    // Partial update: keep current column value when the client omits a field.
-    const info = db
-      .prepare(
-        `UPDATE meal_items
-         SET name = COALESCE(@name, name),
-             amount = COALESCE(@amount, amount),
-             calories = COALESCE(@calories, calories),
-             protein = COALESCE(@protein, protein),
-             carbs = COALESCE(@carbs, carbs),
-             fat = COALESCE(@fat, fat)
-         WHERE id = @itemId AND meal_id = @mealId`
-      )
-      .run({
-        itemId,
-        mealId,
-        name: name ?? null,
-        amount: amount ?? null,
-        calories: calories ?? null,
-        protein: protein ?? null,
-        carbs: carbs ?? null,
-        fat: fat ?? null,
-      });
+    const updated = mealItemModel.update(itemId, mealId, {
+      name,
+      amount,
+      calories,
+      protein,
+      carbs,
+      fat,
+    });
 
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Food item not found" });
-      return;
+    if (!updated) {
+      throw new HttpError(404, "Food item not found");
     }
 
-    const data = db.prepare("SELECT * FROM meal_items WHERE id = ?").get(itemId);
-    res.json(data);
-  } catch (err) {
-    console.error("Update food item error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to update food item" });
-  }
-}
+    const data = mealItemModel.findById(itemId)!;
+    res.json(renderMealItem(data));
+  },
+  "Update food item error",
+  "Failed to update food item"
+);
 
 // DELETE /api/meals/:id/items/:itemId — delete food item
-export async function deleteMealItem(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteMealItem = asyncHandler(
+  async (req, res) => {
     const { id: mealId, itemId } = req.params;
 
     // Verify ownership
-    const meal = db
-      .prepare("SELECT id FROM meals WHERE id = ? AND user_id = ?")
-      .get(mealId, req.userId!);
-
-    if (!meal) {
-      res.status(404).json({ error: "Meal not found" });
-      return;
+    if (!mealModel.ownsMeal(mealId, req.userId!)) {
+      throw new HttpError(404, "Meal not found");
     }
 
-    const info = db
-      .prepare("DELETE FROM meal_items WHERE id = ? AND meal_id = ?")
-      .run(itemId, mealId);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Food item not found" });
-      return;
+    if (!mealItemModel.delete(itemId, mealId)) {
+      throw new HttpError(404, "Food item not found");
     }
 
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete food item error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete food item" });
-  }
-}
+  },
+  "Delete food item error",
+  "Failed to delete food item"
+);

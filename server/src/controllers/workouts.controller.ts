@@ -1,466 +1,308 @@
-import { Response } from "express";
-import { randomUUID } from "node:crypto";
-import { AuthRequest } from "../middlewares/auth.js";
-import { db } from "../config/db.js";
+import { workoutModel, type MuscleGroupsInput, type WorkoutRow } from "../models/workout.model.js";
+import { exerciseModel } from "../models/exercise.model.js";
+import { exerciseSetModel } from "../models/exerciseSet.model.js";
+import { exerciseLibraryModel } from "../models/exerciseLibrary.model.js";
+import {
+  renderWorkout,
+  renderExercise,
+  renderExerciseWithSets,
+  renderSet,
+  renderExerciseLibrary,
+  renderExerciseLibraryEntry,
+  type WorkoutResponse,
+} from "../views/workout.view.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { HttpError } from "../utils/httpError.js";
+import { today } from "../utils/date.js";
 
-// Prepared statements for the nested reads.
-const exercisesByWorkout = db.prepare(
-  "SELECT * FROM exercises WHERE workout_id = ? ORDER BY created_at ASC"
-);
-const setsByExercise = db.prepare(
-  "SELECT * FROM exercise_sets WHERE exercise_id = ? ORDER BY order_index ASC"
-);
+interface ExerciseLibraryBody {
+  name?: string;
+  muscle_group?: string;
+}
 
-// Attach exercises (with their sets) to a workout row and normalize the
-// SQLite 0/1 integers back to booleans the front-end expects.
-function hydrateWorkout(workout: Record<string, any>) {
-  workout.completed = !!workout.completed;
-  workout.muscle_groups = workout.muscle_groups
-    ? String(workout.muscle_groups).split(",").filter(Boolean)
-    : [];
-  workout.exercises = exercisesByWorkout.all(workout.id).map((ex: any) => {
-    ex.exercise_sets = setsByExercise
-      .all(ex.id)
-      .map((s: any) => ({ ...s, completed: !!s.completed }));
-    return ex;
-  });
-  return workout;
+interface WorkoutBody {
+  name?: string;
+  date?: string;
+  notes?: string;
+  completed?: boolean;
+  muscle_groups?: MuscleGroupsInput;
+}
+
+interface ExerciseBody {
+  name?: string;
+  notes?: string;
+}
+
+interface SetBody {
+  weight?: number;
+  reps?: number;
+  completed?: boolean;
+  order_index?: number;
+}
+
+// Attach exercises (with their sets) to a workout row and render it.
+function loadWorkout(workout: WorkoutRow): WorkoutResponse {
+  const exercises = exerciseModel.listByWorkout(workout.id).map((exercise) => ({
+    exercise,
+    sets: exerciseSetModel.listByExercise(exercise.id),
+  }));
+  return renderWorkout(workout, exercises);
 }
 
 // Load a single owned workout fully hydrated, or undefined if not the owner.
-function getWorkout(id: string, userId: string) {
-  const workout = db
-    .prepare("SELECT * FROM workouts WHERE id = ? AND user_id = ?")
-    .get(id, userId) as Record<string, any> | undefined;
-  return workout ? hydrateWorkout(workout) : undefined;
-}
-
-// Confirm the workout belongs to the user before touching child rows (IDOR guard).
-function ownsWorkout(workoutId: string, userId: string): boolean {
-  return !!db
-    .prepare("SELECT id FROM workouts WHERE id = ? AND user_id = ?")
-    .get(workoutId, userId);
-}
-
-// Confirm the exercise belongs to this workout AND the workout belongs to the
-// user. Guards the set operations so an exerciseId from a different workout
-// cannot be grafted onto this one (ownership-chain integrity).
-function ownsExercise(
-  exerciseId: string,
-  workoutId: string,
-  userId: string
-): boolean {
-  return !!db
-    .prepare(
-      `SELECT e.id FROM exercises e
-       JOIN workouts w ON w.id = e.workout_id
-       WHERE e.id = ? AND e.workout_id = ? AND w.user_id = ?`
-    )
-    .get(exerciseId, workoutId, userId);
+function getWorkout(id: string, userId: string): WorkoutResponse | undefined {
+  const workout = workoutModel.findOwned(id, userId);
+  return workout ? loadWorkout(workout) : undefined;
 }
 
 // GET /api/workouts/library/exercises — list global and user's exercises
-export async function listExerciseLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const data = db
-      .prepare(
-        `SELECT * FROM exercise_library
-         WHERE user_id = ? OR user_id IS NULL
-         ORDER BY name ASC`
-      )
-      .all(req.userId!);
-    res.json(data);
-  } catch (err) {
-    console.error("List exercise library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to fetch exercise library" });
-  }
-}
+export const listExerciseLibrary = asyncHandler(
+  async (req, res) => {
+    const data = exerciseLibraryModel.listVisibleToUser(req.userId!);
+    res.json(renderExerciseLibrary(data));
+  },
+  "List exercise library error",
+  "Failed to fetch exercise library"
+);
 
 // POST /api/workouts/library/exercises — add exercise to library
-export async function createExerciseLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const { name, muscle_group } = req.body;
+export const createExerciseLibrary = asyncHandler(
+  async (req, res) => {
+    const { name, muscle_group } = req.body as ExerciseLibraryBody;
     if (!name) {
-      res.status(400).json({ error: "Exercise name is required" });
-      return;
+      throw new HttpError(400, "Exercise name is required");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      "INSERT INTO exercise_library (id, user_id, name, muscle_group) VALUES (?, ?, ?, ?)"
-    ).run(id, req.userId!, name, muscle_group || null);
-
-    const data = db
-      .prepare("SELECT * FROM exercise_library WHERE id = ?")
-      .get(id);
-    res.status(201).json(data);
-  } catch (err) {
-    console.error("Create exercise library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to create exercise in library" });
-  }
-}
+    const id = exerciseLibraryModel.create(req.userId!, name, muscle_group);
+    const data = exerciseLibraryModel.findById(id)!;
+    res.status(201).json(renderExerciseLibraryEntry(data));
+  },
+  "Create exercise library error",
+  "Failed to create exercise in library"
+);
 
 // DELETE /api/workouts/library/exercises/:id — delete user's exercise
-export async function deleteExerciseLibrary(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteExerciseLibrary = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
 
     // Only allow deleting user's own exercises (user_id = ? excludes globals)
-    const info = db
-      .prepare("DELETE FROM exercise_library WHERE id = ? AND user_id = ?")
-      .run(id, req.userId!);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Exercise not found or cannot be deleted" });
-      return;
+    if (!exerciseLibraryModel.deleteOwned(id, req.userId!)) {
+      throw new HttpError(404, "Exercise not found or cannot be deleted");
     }
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete exercise library error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete exercise from library" });
-  }
-}
+  },
+  "Delete exercise library error",
+  "Failed to delete exercise from library"
+);
 
 // GET /api/workouts — list user's workouts with exercises and sets
-export async function listWorkouts(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const workouts = db
-      .prepare(
-        "SELECT * FROM workouts WHERE user_id = ? ORDER BY created_at DESC"
-      )
-      .all(req.userId!) as Record<string, any>[];
-
-    res.json(workouts.map(hydrateWorkout));
-  } catch (err) {
-    console.error("List workouts error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to fetch workouts" });
-  }
-}
+export const listWorkouts = asyncHandler(
+  async (req, res) => {
+    const workouts = workoutModel.listByUser(req.userId!);
+    res.json(workouts.map(loadWorkout));
+  },
+  "List workouts error",
+  "Failed to fetch workouts"
+);
 
 // POST /api/workouts — create a workout
-export async function createWorkout(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
-    const { name, date, notes, completed, muscle_groups } = req.body;
+export const createWorkout = asyncHandler(
+  async (req, res) => {
+    const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
 
     if (!name) {
-      res.status(400).json({ error: "Workout name is required" });
-      return;
+      throw new HttpError(400, "Workout name is required");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      "INSERT INTO workouts (id, user_id, name, date, completed, notes, muscle_groups) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(
-      id,
-      req.userId!,
+    const id = workoutModel.create({
+      userId: req.userId!,
       name,
-      date || new Date().toISOString().split("T")[0],
-      completed ? 1 : 0,
-      notes || null,
-      Array.isArray(muscle_groups) ? muscle_groups.join(",") : muscle_groups || null
-    );
+      date: date || today(),
+      completed,
+      notes,
+      muscleGroups: muscle_groups,
+    });
 
     res.status(201).json(getWorkout(id, req.userId!));
-  } catch (err) {
-    console.error("Create workout error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to create workout" });
-  }
-}
+  },
+  "Create workout error",
+  "Failed to create workout"
+);
 
 // PUT /api/workouts/:id — update a workout
-export async function updateWorkout(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const updateWorkout = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
-    const { name, date, notes, completed, muscle_groups } = req.body;
+    const { name, date, notes, completed, muscle_groups } = req.body as WorkoutBody;
 
-    // Partial update: COALESCE keeps the current column value when the client
-    // omits a field (front sends partial payloads like { completed: true }).
-    const info = db
-      .prepare(
-        `UPDATE workouts
-         SET name = COALESCE(@name, name),
-             date = COALESCE(@date, date),
-             notes = COALESCE(@notes, notes),
-             completed = COALESCE(@completed, completed),
-             muscle_groups = COALESCE(@muscle_groups, muscle_groups)
-         WHERE id = @id AND user_id = @user_id`
-      )
-      .run({
-        id,
-        user_id: req.userId!,
-        name: name ?? null,
-        date: date ?? null,
-        notes: notes ?? null,
-        completed: completed === undefined ? null : completed ? 1 : 0,
-        muscle_groups: Array.isArray(muscle_groups)
-          ? muscle_groups.join(",")
-          : muscle_groups ?? null,
-      });
+    const updated = workoutModel.update({
+      id,
+      userId: req.userId!,
+      name,
+      date,
+      notes,
+      completed,
+      muscleGroups: muscle_groups,
+    });
 
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
+    if (!updated) {
+      throw new HttpError(404, "Workout not found");
     }
 
     res.json(getWorkout(id, req.userId!));
-  } catch (err) {
-    console.error("Update workout error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to update workout" });
-  }
-}
+  },
+  "Update workout error",
+  "Failed to update workout"
+);
 
 // DELETE /api/workouts/:id — delete a workout
-export async function deleteWorkout(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteWorkout = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
 
-    const info = db
-      .prepare("DELETE FROM workouts WHERE id = ? AND user_id = ?")
-      .run(id, req.userId!);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
+    if (!workoutModel.delete(id, req.userId!)) {
+      throw new HttpError(404, "Workout not found");
     }
 
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete workout error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete workout" });
-  }
-}
+  },
+  "Delete workout error",
+  "Failed to delete workout"
+);
 
 // POST /api/workouts/:id/exercises — add exercise to workout
-export async function addExercise(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const addExercise = asyncHandler(
+  async (req, res) => {
     const { id: workoutId } = req.params;
-    const { name, notes } = req.body;
+    const { name, notes } = req.body as ExerciseBody;
 
     if (!name) {
-      res.status(400).json({ error: "Exercise name is required" });
-      return;
+      throw new HttpError(400, "Exercise name is required");
     }
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
+    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+      throw new HttpError(404, "Workout not found");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      "INSERT INTO exercises (id, workout_id, name, notes) VALUES (?, ?, ?, ?)"
-    ).run(id, workoutId, name, notes || null);
-
-    const data = db
-      .prepare("SELECT * FROM exercises WHERE id = ?")
-      .get(id) as Record<string, any>;
-    data.exercise_sets = [];
-    res.status(201).json(data);
-  } catch (err) {
-    console.error("Add exercise error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to add exercise" });
-  }
-}
+    const id = exerciseModel.create(workoutId, name, notes);
+    const data = exerciseModel.findById(id)!;
+    res.status(201).json(renderExerciseWithSets(data, []));
+  },
+  "Add exercise error",
+  "Failed to add exercise"
+);
 
 // DELETE /api/workouts/:id/exercises/:exerciseId — delete exercise
-export async function deleteExercise(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const deleteExercise = asyncHandler(
+  async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
+    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+      throw new HttpError(404, "Workout not found");
     }
 
-    const info = db
-      .prepare("DELETE FROM exercises WHERE id = ? AND workout_id = ?")
-      .run(exerciseId, workoutId);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Exercise not found" });
-      return;
+    if (!exerciseModel.delete(exerciseId, workoutId)) {
+      throw new HttpError(404, "Exercise not found");
     }
 
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete exercise error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete exercise" });
-  }
-}
+  },
+  "Delete exercise error",
+  "Failed to delete exercise"
+);
 
 // PUT /api/workouts/:id/exercises/:exerciseId — update exercise
-export async function updateExercise(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
-  try {
+export const updateExercise = asyncHandler(
+  async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
-    const { name, notes } = req.body;
+    const { name, notes } = req.body as ExerciseBody;
 
-    if (!ownsWorkout(workoutId, req.userId!)) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
+    if (!workoutModel.ownsWorkout(workoutId, req.userId!)) {
+      throw new HttpError(404, "Workout not found");
     }
 
-    const info = db
-      .prepare(
-        `UPDATE exercises
-         SET name = COALESCE(@name, name), notes = COALESCE(@notes, notes)
-         WHERE id = @exerciseId AND workout_id = @workoutId`
-      )
-      .run({
-        exerciseId,
-        workoutId,
-        name: name ?? null,
-        notes: notes ?? null,
-      });
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Exercise not found" });
-      return;
+    if (!exerciseModel.update(exerciseId, workoutId, name, notes)) {
+      throw new HttpError(404, "Exercise not found");
     }
 
-    const updatedExercise = db
-      .prepare("SELECT * FROM exercises WHERE id = ?")
-      .get(exerciseId);
-    res.json(updatedExercise);
-  } catch (err) {
-    console.error("Update exercise error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to update exercise" });
-  }
-}
+    const updatedExercise = exerciseModel.findById(exerciseId)!;
+    res.json(renderExercise(updatedExercise));
+  },
+  "Update exercise error",
+  "Failed to update exercise"
+);
 
 // POST /api/workouts/:id/exercises/:exerciseId/sets — add set to exercise
-export async function addSet(req: AuthRequest, res: Response): Promise<void> {
-  try {
+export const addSet = asyncHandler(
+  async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
-    const { weight, reps, completed, order_index } = req.body;
+    const { weight, reps, completed, order_index } = req.body as SetBody;
 
-    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
-      res.status(404).json({ error: "Exercise not found" });
-      return;
+    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+      throw new HttpError(404, "Exercise not found");
     }
 
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO exercise_sets (id, exercise_id, weight, reps, completed, order_index)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(
-      id,
+    const id = exerciseSetModel.create({
       exerciseId,
-      weight || 0,
-      reps || 0,
-      completed ? 1 : 0,
-      order_index || 0
-    );
+      weight,
+      reps,
+      completed,
+      orderIndex: order_index,
+    });
 
-    const data = db
-      .prepare("SELECT * FROM exercise_sets WHERE id = ?")
-      .get(id) as Record<string, any>;
-    data.completed = !!data.completed;
-    res.status(201).json(data);
-  } catch (err) {
-    console.error("Add set error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to add set" });
-  }
-}
+    const data = exerciseSetModel.findById(id)!;
+    res.status(201).json(renderSet(data));
+  },
+  "Add set error",
+  "Failed to add set"
+);
 
 // PUT /api/workouts/:id/exercises/:exerciseId/sets/:setId — update set
-export async function updateSet(req: AuthRequest, res: Response): Promise<void> {
-  try {
+export const updateSet = asyncHandler(
+  async (req, res) => {
     const { id: workoutId, exerciseId, setId } = req.params;
-    const { weight, reps, completed, order_index } = req.body;
+    const { weight, reps, completed, order_index } = req.body as SetBody;
 
-    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
-      res.status(404).json({ error: "Set not found" });
-      return;
+    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+      throw new HttpError(404, "Set not found");
     }
 
-    // Partial update: the front edits one field at a time ({ weight },
-    // { reps }, { completed }). COALESCE preserves the untouched columns.
-    const info = db
-      .prepare(
-        `UPDATE exercise_sets
-         SET weight = COALESCE(@weight, weight),
-             reps = COALESCE(@reps, reps),
-             completed = COALESCE(@completed, completed),
-             order_index = COALESCE(@order_index, order_index)
-         WHERE id = @setId AND exercise_id = @exerciseId`
-      )
-      .run({
-        setId,
-        exerciseId,
-        weight: weight ?? null,
-        reps: reps ?? null,
-        completed: completed === undefined ? null : completed ? 1 : 0,
-        order_index: order_index ?? null,
-      });
+    const updated = exerciseSetModel.update({
+      setId,
+      exerciseId,
+      weight,
+      reps,
+      completed,
+      orderIndex: order_index,
+    });
 
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Set not found" });
-      return;
+    if (!updated) {
+      throw new HttpError(404, "Set not found");
     }
 
-    const data = db
-      .prepare("SELECT * FROM exercise_sets WHERE id = ?")
-      .get(setId) as Record<string, any>;
-    data.completed = !!data.completed;
-    res.json(data);
-  } catch (err) {
-    console.error("Update set error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to update set" });
-  }
-}
+    const data = exerciseSetModel.findById(setId)!;
+    res.json(renderSet(data));
+  },
+  "Update set error",
+  "Failed to update set"
+);
 
 // DELETE /api/workouts/:id/exercises/:exerciseId/sets/:setId — delete set
-export async function deleteSet(req: AuthRequest, res: Response): Promise<void> {
-  try {
+export const deleteSet = asyncHandler(
+  async (req, res) => {
     const { id: workoutId, exerciseId, setId } = req.params;
 
-    if (!ownsExercise(exerciseId, workoutId, req.userId!)) {
-      res.status(404).json({ error: "Set not found" });
-      return;
+    if (!exerciseModel.ownsExercise(exerciseId, workoutId, req.userId!)) {
+      throw new HttpError(404, "Set not found");
     }
 
-    const info = db
-      .prepare("DELETE FROM exercise_sets WHERE id = ? AND exercise_id = ?")
-      .run(setId, exerciseId);
-
-    if (info.changes === 0) {
-      res.status(404).json({ error: "Set not found" });
-      return;
+    if (!exerciseSetModel.delete(setId, exerciseId)) {
+      throw new HttpError(404, "Set not found");
     }
 
     res.status(204).send();
-  } catch (err) {
-    console.error("Delete set error:", (err as Error).message);
-    res.status(500).json({ error: "Failed to delete set" });
-  }
-}
+  },
+  "Delete set error",
+  "Failed to delete set"
+);
