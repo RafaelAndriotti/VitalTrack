@@ -12,8 +12,20 @@ function bodyParserErrorType(err: unknown): string | undefined {
 /** Fixed, generic messages for other client errors raised by body-parser. */
 const CLIENT_ERROR_MESSAGES: Record<number, string> = {
   400: "Bad request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not found",
+  405: "Method not allowed",
+  408: "Request timeout",
+  409: "Conflict",
+  410: "Gone",
+  411: "Length required",
+  412: "Precondition failed",
   413: "Payload too large",
   415: "Unsupported media type",
+  416: "Range not satisfiable",
+  422: "Unprocessable entity",
+  429: "Too many requests",
 };
 
 /**
