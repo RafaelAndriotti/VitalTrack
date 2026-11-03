@@ -14,6 +14,11 @@ import {
 const FOOD_NAME_REQUIRED = "Food name is required";
 const MEAL_NAME_REQUIRED = "Meal name is required";
 
+// Plausibility ceilings: far above anything real, they only stop absurd values.
+const CALORIES_MAX = 100_000;
+const MACRO_MAX = 10_000;
+const AMOUNT_MAX = 100_000;
+
 // ---- params ----
 export const idParams = z.object({ id: idParam("id") });
 export const itemParams = z.object({
@@ -30,11 +35,11 @@ export const listMealsQuery = z.object({
 // ---- food library ----
 export const createFoodLibraryBody = bodyObject({
   name: requiredString(FOOD_NAME_REQUIRED, "Food name", 100),
-  calories: nonNegative("calories"),
-  protein: nonNegative("protein"),
-  carbs: nonNegative("carbs"),
-  fat: nonNegative("fat"),
-  serving_size: positive("serving_size"),
+  calories: nonNegative("calories", CALORIES_MAX),
+  protein: nonNegative("protein", MACRO_MAX),
+  carbs: nonNegative("carbs", MACRO_MAX),
+  fat: nonNegative("fat", MACRO_MAX),
+  serving_size: positive("serving_size", AMOUNT_MAX),
 });
 
 // ---- meals ----
@@ -54,21 +59,21 @@ export const updateMealBody = bodyObject({
 // ---- meal items ----
 export const createMealItemBody = bodyObject({
   name: requiredString(FOOD_NAME_REQUIRED, "Food name", 100),
-  amount: positive("amount"),
-  calories: nonNegative("calories"),
-  protein: nonNegative("protein"),
-  carbs: nonNegative("carbs"),
-  fat: nonNegative("fat"),
+  amount: positive("amount", AMOUNT_MAX),
+  calories: nonNegative("calories", CALORIES_MAX),
+  protein: nonNegative("protein", MACRO_MAX),
+  carbs: nonNegative("carbs", MACRO_MAX),
+  fat: nonNegative("fat", MACRO_MAX),
 });
 
 // Partial update; amount must be > 0, same as create.
 export const updateMealItemBody = bodyObject({
   name: optionalNonEmptyString(FOOD_NAME_REQUIRED, "Food name", 100),
-  amount: positive("amount"),
-  calories: nonNegative("calories"),
-  protein: nonNegative("protein"),
-  carbs: nonNegative("carbs"),
-  fat: nonNegative("fat"),
+  amount: positive("amount", AMOUNT_MAX),
+  calories: nonNegative("calories", CALORIES_MAX),
+  protein: nonNegative("protein", MACRO_MAX),
+  carbs: nonNegative("carbs", MACRO_MAX),
+  fat: nonNegative("fat", MACRO_MAX),
 });
 
 export type CreateFoodLibraryBody = z.infer<typeof createFoodLibraryBody>;

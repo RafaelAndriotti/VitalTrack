@@ -9,9 +9,10 @@ interface ValidateSchemas {
 
 /**
  * Parses body/params/query with zod. On success req.body and req.params are
- * replaced by the parsed data (unknown keys stripped). In Express 4
- * `req.query` is a getter, so the parsed query goes to `res.locals.query`
- * (read it with `validatedQuery`). On failure responds 400 with
+ * replaced by the parsed data (unknown keys stripped). `req.query` is
+ * writable in Express 4 but a read-only getter in Express 5, so the parsed
+ * query goes to `res.locals.query` (read it with `validatedQuery`) to keep a
+ * future upgrade painless. On failure responds 400 with
  * `{ error: <first problem> }`, the same shape the app and the existing tests
  * expect (no extra `details` field: existing tests deepEqual the whole body).
  */
@@ -46,7 +47,16 @@ export function validate(schemas: ValidateSchemas): RequestHandler {
   };
 }
 
-/** The query parsed by `validate({ query })`; only valid behind that middleware. */
-export function validatedQuery<T>(res: Response): T {
-  return res.locals.query as T;
+/**
+ * The body parsed by `validate({ body: schema })`, typed from the schema.
+ * Re-parsing the already-clean body is cheap and idempotent for our schemas;
+ * it avoids a cast and throws (-> 500) if the middleware was forgotten.
+ */
+export function validatedBody<S extends z.ZodType>(req: Request, schema: S): z.infer<S> {
+  return schema.parse(req.body);
+}
+
+/** The query parsed by `validate({ query: schema })`, typed from the schema. */
+export function validatedQuery<S extends z.ZodType>(res: Response, schema: S): z.infer<S> {
+  return schema.parse(res.locals.query);
 }

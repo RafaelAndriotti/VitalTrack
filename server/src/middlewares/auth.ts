@@ -5,10 +5,6 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
-interface JwtPayload {
-  userId: string;
-}
-
 export function authenticate(
   req: AuthRequest,
   res: Response,
@@ -29,7 +25,17 @@ export function authenticate(
       throw new Error("JWT_SECRET is not configured");
     }
 
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    // libs/token signs with HS256; pin it so no other algorithm is accepted.
+    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
+    // A validly signed token must still carry a usable userId.
+    if (
+      typeof decoded !== "object" ||
+      decoded === null ||
+      typeof decoded.userId !== "string" ||
+      decoded.userId === ""
+    ) {
+      throw new Error("Invalid token payload");
+    }
     req.userId = decoded.userId;
     next();
   } catch {

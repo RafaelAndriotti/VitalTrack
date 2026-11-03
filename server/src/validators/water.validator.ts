@@ -12,10 +12,13 @@ export const getWaterQuery = z.object({
 // these two fields (it was a 400 before as well).
 const GOAL_MSG = "goal_ml must be a positive number";
 const AMOUNT_MSG = "amount_ml must be a non-negative number";
+const WATER_MAX = 50_000;
+const goalTooBig = `goal_ml must be less than or equal to ${WATER_MAX}`;
+const amountTooBig = `amount_ml must be less than or equal to ${WATER_MAX}`;
 
 export const upsertWaterBody = bodyObject({
-  goal_ml: z.number({ error: GOAL_MSG }).gt(0, GOAL_MSG).optional(),
-  amount_ml: z.number({ error: AMOUNT_MSG }).min(0, AMOUNT_MSG).optional(),
+  goal_ml: z.number({ error: GOAL_MSG }).gt(0, GOAL_MSG).max(WATER_MAX, goalTooBig).optional(),
+  amount_ml: z.number({ error: AMOUNT_MSG }).min(0, AMOUNT_MSG).max(WATER_MAX, amountTooBig).optional(),
   date: optionalDate(),
 });
 

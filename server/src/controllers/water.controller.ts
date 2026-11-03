@@ -1,10 +1,10 @@
 import { dailyWaterModel } from "../models/dailyWater.model.js";
 import { renderWater, renderDefaultWater } from "../views/water.view.js";
+import { validatedBody, validatedQuery } from "../middlewares/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireUserId } from "../utils/requireUserId.js";
 import { requireFound } from "../utils/requireFound.js";
-import { validatedQuery } from "../middlewares/validate.js";
-import type { GetWaterQuery, UpsertWaterBody } from "../validators/water.validator.js";
+import { getWaterQuery, upsertWaterBody } from "../validators/water.validator.js";
 
 // GET /api/water?date=YYYY-MM-DD
 export const getWater = asyncHandler(
@@ -13,7 +13,7 @@ export const getWater = asyncHandler(
 
     const { date, row, latestGoal } = dailyWaterModel.getDay({
       userId,
-      date: validatedQuery<GetWaterQuery>(res).date,
+      date: validatedQuery(res, getWaterQuery).date,
     });
 
     // Se não existe registro para o dia, retornamos um default
@@ -34,7 +34,7 @@ export const getWater = asyncHandler(
 export const upsertWater = asyncHandler(
   async (req, res) => {
     const userId = requireUserId(req);
-    const { date, amount_ml, goal_ml } = req.body as UpsertWaterBody;
+    const { date, amount_ml, goal_ml } = validatedBody(req, upsertWaterBody);
 
     // upsertWaterBody guarantees goal_ml > 0 (a 0/negative goal would cause a
     // division by zero in the app's progress bar) and amount_ml >= 0.

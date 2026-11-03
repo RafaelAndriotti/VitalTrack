@@ -8,18 +8,18 @@ import {
   renderFoodLibraryEntry,
   type MealResponse,
 } from "../views/meal.view.js";
+import { validatedBody, validatedQuery } from "../middlewares/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
 import { requireUserId } from "../utils/requireUserId.js";
 import { requireFound } from "../utils/requireFound.js";
-import { validatedQuery } from "../middlewares/validate.js";
-import type {
-  CreateFoodLibraryBody,
-  CreateMealBody,
-  UpdateMealBody,
-  CreateMealItemBody,
-  UpdateMealItemBody,
-  ListMealsQuery,
+import {
+  createFoodLibraryBody,
+  createMealBody,
+  updateMealBody,
+  createMealItemBody,
+  updateMealItemBody,
+  listMealsQuery,
 } from "../validators/meals.validator.js";
 
 function loadMeal(meal: MealRow): MealResponse {
@@ -47,7 +47,7 @@ export const listFoodLibrary = asyncHandler(
 export const createFoodLibrary = asyncHandler(
   async (req, res) => {
     const { name, calories, protein, carbs, fat, serving_size } =
-      req.body as CreateFoodLibraryBody;
+      validatedBody(req, createFoodLibraryBody);
 
     const id = foodLibraryModel.create({
       userId: requireUserId(req),
@@ -84,7 +84,7 @@ export const deleteFoodLibrary = asyncHandler(
 // GET /api/meals — list user's meals with meal items (optional ?date=YYYY-MM-DD filter)
 export const listMeals = asyncHandler(
   async (req, res) => {
-    const { date } = validatedQuery<ListMealsQuery>(res);
+    const { date } = validatedQuery(res, listMealsQuery);
 
     const meals = mealModel.listByUser({
       userId: requireUserId(req),
@@ -100,7 +100,7 @@ export const listMeals = asyncHandler(
 // POST /api/meals — create a meal
 export const createMeal = asyncHandler(
   async (req, res) => {
-    const { name, date, time } = req.body as CreateMealBody;
+    const { name, date, time } = validatedBody(req, createMealBody);
 
     const userId = requireUserId(req);
     const id = mealModel.create({ userId, name, date, time });
@@ -115,7 +115,7 @@ export const createMeal = asyncHandler(
 export const updateMeal = asyncHandler(
   async (req, res) => {
     const { id } = req.params;
-    const { name, date, time } = req.body as UpdateMealBody;
+    const { name, date, time } = validatedBody(req, updateMealBody);
 
     const userId = requireUserId(req);
 
@@ -149,7 +149,7 @@ export const addMealItem = asyncHandler(
   async (req, res) => {
     const { id: mealId } = req.params;
     const { name, amount, calories, protein, carbs, fat } =
-      req.body as CreateMealItemBody;
+      validatedBody(req, createMealItemBody);
 
     // Verify ownership
     if (!mealModel.ownsMeal({ mealId, userId: requireUserId(req) })) {
@@ -178,7 +178,7 @@ export const updateMealItem = asyncHandler(
   async (req, res) => {
     const { id: mealId, itemId } = req.params;
     const { name, amount, calories, protein, carbs, fat } =
-      req.body as UpdateMealItemBody;
+      validatedBody(req, updateMealItemBody);
 
     // Verify ownership
     if (!mealModel.ownsMeal({ mealId, userId: requireUserId(req) })) {

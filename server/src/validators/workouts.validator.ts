@@ -11,9 +11,12 @@ import {
   requiredString,
 } from "./common.js";
 
-// Notes are free text; the 100kb JSON body limit is the real cap, and an
-// existing test stores a 90KB note, so the field limit sits just above that.
-const NOTES_MAX = 100_000;
+// Notes are free text; 10k characters is plenty for a workout/exercise note.
+const NOTES_MAX = 10_000;
+// Plausibility ceilings: far above anything real, they only stop absurd values.
+const WEIGHT_MAX = 2000;
+const REPS_MAX = 10_000;
+const ORDER_INDEX_MAX = 10_000;
 const WORKOUT_NAME_REQUIRED = "Workout name is required";
 const EXERCISE_NAME_REQUIRED = "Exercise name is required";
 
@@ -31,7 +34,8 @@ export const setParams = z.object({
 
 // ---- workouts ----
 // muscle_groups: array of strings (1-50 chars each, max 20 items), or a raw
-// string (accepted for compatibility). Type errors report MUSCLE_GROUPS_TYPE;
+// string (accepted for compatibility). Array items must not contain commas
+// because the column stores them as CSV. Type errors report MUSCLE_GROUPS_TYPE;
 // size errors have their own messages (checked in superRefine so the first
 // message is deterministic).
 const MUSCLE_GROUPS_TYPE = "muscle_groups must be an array of strings or a string";
@@ -47,6 +51,9 @@ const muscleGroups = z
     if (value.some((item) => item.length === 0)) return fail("muscle_groups items must not be empty");
     if (value.some((item) => item.length > 50)) {
       return fail("muscle_groups items must be at most 50 characters");
+    }
+    if (value.some((item) => item.includes(","))) {
+      return fail("muscle_groups items must not contain commas");
     }
   })
   .nullish();
@@ -86,19 +93,19 @@ export const updateExerciseBody = bodyObject({
 
 // ---- sets ----
 export const createSetBody = bodyObject({
-  weight: nonNegative("weight"),
-  reps: nonNegative("reps"),
+  weight: nonNegative("weight", WEIGHT_MAX),
+  reps: nonNegative("reps", REPS_MAX),
   completed: optionalBoolean("completed"),
-  order_index: nonNegativeInt("order_index"),
+  order_index: nonNegativeInt("order_index", ORDER_INDEX_MAX),
 });
 
 // Partial update; same rules as create. reps may be decimal (the app's
 // NumberInput uses parseFloat, so 8.5 can be sent).
 export const updateSetBody = bodyObject({
-  weight: nonNegative("weight"),
-  reps: nonNegative("reps"),
+  weight: nonNegative("weight", WEIGHT_MAX),
+  reps: nonNegative("reps", REPS_MAX),
   completed: optionalBoolean("completed"),
-  order_index: nonNegativeInt("order_index"),
+  order_index: nonNegativeInt("order_index", ORDER_INDEX_MAX),
 });
 
 export type CreateWorkoutBody = z.infer<typeof createWorkoutBody>;

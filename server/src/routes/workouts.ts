@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
+import { userRateLimit } from "../middlewares/userRateLimit.js";
 import {
   listExerciseLibrary,
   createExerciseLibrary,
@@ -32,7 +33,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticate, userRateLimit);
 
 // Exercise library
 router.get("/library/exercises", listExerciseLibrary);

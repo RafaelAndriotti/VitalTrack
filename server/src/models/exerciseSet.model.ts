@@ -16,7 +16,7 @@ export interface CreateSetInput {
   exerciseId: string;
   weight?: number | null;
   reps?: number | null;
-  completed?: unknown;
+  completed?: boolean | null;
   orderIndex?: number | null;
 }
 
@@ -25,7 +25,7 @@ export interface UpdateSetInput {
   exerciseId: string;
   weight?: number | null;
   reps?: number | null;
-  completed?: unknown;
+  completed?: boolean | null;
   orderIndex?: number | null;
 }
 

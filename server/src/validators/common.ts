@@ -45,33 +45,39 @@ export const optionalString = (label: string, max: number) =>
 /** Optional date; null counts as omitted, like before. */
 export const optionalDate = (field = "date") => isoDate(field).nullish();
 
+/**
+ * Optional boolean. `null` is accepted here, but the models store a null
+ * `completed` as false (pre-existing behavior, kept on purpose): only an
+ * omitted field leaves the stored value untouched.
+ */
 export const optionalBoolean = (field: string) =>
   z.boolean({ error: `${field} must be a boolean` }).nullish();
 
-/** Finite number >= 0 (z.number() already rejects NaN/Infinity). */
-export const nonNegative = (field: string) =>
+const maxMessage = (field: string, max: number) =>
+  `${field} must be less than or equal to ${max}`;
+
+/** Finite number in [0, max] (z.number() already rejects NaN/Infinity). */
+export const nonNegative = (field: string, max: number) =>
   z
     .number({ error: `${field} must be a number` })
     .min(0, `${field} must be greater than or equal to 0`)
+    .max(max, maxMessage(field, max))
     .nullish();
 
-export const nonNegativeInt = (field: string) =>
+export const nonNegativeInt = (field: string, max: number) =>
   z
     .number({ error: `${field} must be a number` })
     .int(`${field} must be an integer`)
     .min(0, `${field} must be greater than or equal to 0`)
+    .max(max, maxMessage(field, max))
     .nullish();
 
-export const integer = (field: string) =>
-  z
-    .number({ error: `${field} must be a number` })
-    .int(`${field} must be an integer`)
-    .nullish();
-
-export const positive = (field: string) =>
+/** Finite number in (0, max]. */
+export const positive = (field: string, max: number) =>
   z
     .number({ error: `${field} must be a number` })
     .gt(0, `${field} must be greater than 0`)
+    .max(max, maxMessage(field, max))
     .nullish();
 
 /** Bodies must be JSON objects; unknown keys are stripped (zod default). */

@@ -21,7 +21,7 @@ export interface CreateWorkoutInput {
   userId: string;
   name: string;
   date?: string | null;
-  completed?: unknown;
+  completed?: boolean | null;
   notes?: string | null;
   muscleGroups?: MuscleGroupsInput;
 }
@@ -32,7 +32,7 @@ export interface UpdateWorkoutInput {
   name?: string | null;
   date?: string | null;
   notes?: string | null;
-  completed?: unknown;
+  completed?: boolean | null;
   muscleGroups?: MuscleGroupsInput;
 }
 

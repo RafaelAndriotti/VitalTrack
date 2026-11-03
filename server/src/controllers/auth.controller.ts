@@ -2,15 +2,16 @@ import bcrypt from "bcryptjs";
 import { userModel } from "../models/user.model.js";
 import { generateToken } from "../libs/token.js";
 import { renderAuth } from "../views/user.view.js";
+import { validatedBody } from "../middlewares/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../utils/httpError.js";
 import { requireFound } from "../utils/requireFound.js";
-import type { RegisterBody, LoginBody } from "../validators/auth.validator.js";
+import { registerBody, loginBody } from "../validators/auth.validator.js";
 
 // POST /api/auth/register (body validated by registerBody)
 export const register = asyncHandler(
   async (req, res) => {
-    const { email, password, name } = req.body as RegisterBody;
+    const { email, password, name } = validatedBody(req, registerBody);
 
     const normalizedEmail = email.toLowerCase();
 
@@ -35,7 +36,7 @@ export const register = asyncHandler(
 // POST /api/auth/login (body validated by loginBody)
 export const login = asyncHandler(
   async (req, res) => {
-    const { email, password } = req.body as LoginBody;
+    const { email, password } = validatedBody(req, loginBody);
 
     // Find user by email
     const user = userModel.findWithHashByEmail(email.toLowerCase());

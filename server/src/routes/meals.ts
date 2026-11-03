@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
+import { userRateLimit } from "../middlewares/userRateLimit.js";
 import {
   listFoodLibrary,
   createFoodLibrary,
@@ -27,7 +28,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticate, userRateLimit);
 
 // Food library
 router.get("/library/foods", listFoodLibrary);

@@ -38,10 +38,13 @@ test("body larger than 100kb -> current status/body", async () => {
 });
 
 test("body just under 100kb is accepted", async () => {
-  const ok = JSON.stringify({ name: "x", notes: "a".repeat(90 * 1024) });
+  // The filler is an unknown field (stripped by validation), since notes is
+  // capped at 10k chars; it still counts toward the body size.
+  const ok = JSON.stringify({ name: "x", filler: "a".repeat(90 * 1024) });
+  assert.ok(ok.length < 100 * 1024);
   const res = await api("POST", "/api/workouts", { token: u.token, raw: ok });
   assert.equal(res.status, 201);
-  assert.equal(res.body.notes.length, 90 * 1024);
+  assert.equal(res.body.filler, undefined);
 });
 
 test("unknown route -> express default 404 (HTML, not JSON)", async () => {
