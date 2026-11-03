@@ -1,14 +1,31 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import type { ReactNode } from 'react';
 import type { ViewStyle, StyleProp } from 'react-native';
-import { Colors, Spacing, FontSize, BorderRadius, Font, Elevation } from '@/constants/theme';
+import { Colors, Spacing, BorderRadius, Elevation } from '@/constants/theme';
 
-/* Shared primitives for the Clean Clínico world — solid surfaces, calm radii,
-   soft real shadows, a single vital-green accent. No glass, no neon. */
+/* Primitivos de layout do Clean Clínico — superfícies sólidas, raios calmos,
+   sombras suaves e um único acento verde. Sem vidro, sem neon. */
 
-export function Screen({ children, contentStyle }: { children: ReactNode; contentStyle?: StyleProp<ViewStyle> }) {
+interface ScreenProps {
+  children: ReactNode;
+  contentStyle?: StyleProp<ViewStyle>;
+  /** Quando informado, habilita pull-to-refresh. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
+}
+
+export function Screen({ children, contentStyle, onRefresh, refreshing = false }: ScreenProps) {
   return (
-    <ScrollView style={s.screen} contentContainerStyle={[s.screenContent, contentStyle]}>
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={[s.screenContent, contentStyle]}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        ) : undefined
+      }
+    >
       {children}
     </ScrollView>
   );
@@ -47,23 +64,6 @@ export function ProgressBar({
   );
 }
 
-export function ErrorBanner({ message }: { message: string }) {
-  if (!message) return null;
-  return (
-    <View style={s.errorBanner}>
-      <Text style={s.errorText} accessibilityRole="alert">{message}</Text>
-    </View>
-  );
-}
-
-export function EmptyState({ text }: { text: string }) {
-  return (
-    <View style={s.empty}>
-      <Text style={s.emptyText}>{text}</Text>
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   screenContent: {
@@ -87,16 +87,4 @@ const s = StyleSheet.create({
 
   track: { borderRadius: BorderRadius.full, overflow: 'hidden', width: '100%' },
   fill: { height: '100%', borderRadius: BorderRadius.full },
-
-  errorBanner: {
-    backgroundColor: Colors.dangerSoft,
-    borderWidth: 1,
-    borderColor: Colors.dangerBorder,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-  },
-  errorText: { color: Colors.danger, textAlign: 'center', fontFamily: Font.medium, fontSize: FontSize.sm },
-
-  empty: { padding: Spacing.xl, alignItems: 'center' },
-  emptyText: { color: Colors.textMuted, fontSize: FontSize.sm, fontFamily: Font.regular, textAlign: 'center' },
 });

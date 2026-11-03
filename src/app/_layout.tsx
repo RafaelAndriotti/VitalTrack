@@ -1,7 +1,8 @@
 import { Slot, useSegments, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
+import { DialogProvider } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
@@ -55,9 +56,11 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <InitialLayout />
-    </AuthProvider>
+    <DialogProvider>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <InitialLayout />
+      </AuthProvider>
+    </DialogProvider>
   );
 }

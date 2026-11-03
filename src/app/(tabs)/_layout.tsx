@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
+import { Loading } from '@/components/ui';
+import { useAuth } from '@/features/auth/AuthContext';
 import { Colors, Font, Icon } from '@/constants/theme';
 import { Home, Dumbbell, Utensils, Droplets, User } from 'lucide-react-native';
 
 export default function TabsLayout() {
+  const { user, isLoading } = useAuth();
   // Cross-fade calmo ao trocar de aba; desligado quando o usuário pede
   // "Reduzir movimento" no sistema (exigência de acessibilidade nativa).
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -20,6 +23,11 @@ export default function TabsLayout() {
       sub.remove();
     };
   }, []);
+
+  // Guarda: telas autenticadas nunca renderizam sem sessão (nem durante o boot).
+  // O destino fica no grupo (auth), que não redireciona de volta sem usuário: sem loop.
+  if (isLoading) return <Loading />;
+  if (!user) return <Redirect href="/(auth)/welcome" />;
 
   return (
     <Tabs
