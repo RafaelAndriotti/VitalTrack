@@ -1,66 +1,71 @@
 /*
-  ── VitalTrack · Direction contract (Vital Natural / B) ─────────────────────
-  THESIS: A calm health instrument with a colour per domain. Data is the hero;
-          each domain owns one hue so the day reads at a glance.
-  OWN-WORLD: Warm graphite ground (#0E1214), SOLID surfaces separated by a tone
-          step plus a hairline (no glass, no shadow on resting cards). Three
-          domain hues, all desaturated — sage green for training, muted steel
-          blue for hydration, soft amber for nutrition. Poppins, normal case,
-          weight ≤700.
-  REFUSES: neon-on-black (#A3E635 lime, #60A5FA, #FBBF24 at full chroma),
-          glow, glass, gradients. The reference palette is kept as HUES, their
-          chroma pulled down so the app reads natural instead of generated.
+  ── VitalTrack · Direction contract (Vital Pulse / C) ───────────────────────
+  THESIS: An app that makes you want to log the day. Data is the hero, and it
+          is lit: each domain owns one vivid hue so progress jumps off the screen.
+  OWN-WORLD: Near-black graphite ground (#0B0D10, the reference's #11141B
+          family), SOLID surfaces one tone step up. The reference palette at full
+          strength — coral #FF5B3A for training and the primary action, blue
+          #60A5FA for hydration, amber #FBBF24 for nutrition. Poppins, normal
+          case, weight ≤700. Big readouts, thick rings, one strong action.
+  ALLOWS: a soft glow in the accent hue on the one primary action per screen —
+          the reference's "Start" button. Nowhere else.
+  REFUSES: gradients, glass, glow on resting cards, photos or numbers the user
+          did not produce. Colour sits on data and on the action, not on chrome.
   SIGNATURE: "O dia em três anéis" — training, nutrition and hydration as
-          concentric arcs on the home screen, each in its own hue.
+          concentric arcs on the home screen, each in its own hue; the week strip
+          and the streak above it turn a single day into a habit.
+  HISTORY: B (Vital Natural, desaturated) read as washed out to the owner; this
+          contract replaces it on his request. Later, at the owner's request, the
+          lime accent was swapped for coral to cut the default-palette / "AI" look;
+          error red is now crimson #E2445C, always paired with an icon or text.
   STORY: The user opens the app, reads their day at a glance, and logs with one tap.
   FORM: user-pinned direction (concept roll skipped — pinned beats the roll).
-  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
-          review, the verdict, and DESIGN.md.
   ─────────────────────────────────────────────────────────────────────────────
 */
 
 export const Colors = {
-  // Accent — training / primary action. Sage green: the reference lime, naturalised.
-  primary: '#8FB255',
-  primaryDark: '#6F8E40',
-  primaryLight: '#A6C470',
-  primarySoft: 'rgba(143, 178, 85, 0.14)', // tinted fill for accent chips/rows
-  primaryBorder: 'rgba(143, 178, 85, 0.40)',
+  // Accent — training / primary action. Coral, a custom vivid hue (not a Tailwind default).
+  primary: '#FF5B3A',
+  primaryDark: '#E8431F',
+  primaryLight: '#FF8466',
+  primarySoft: 'rgba(255, 91, 58, 0.14)', // tinted fill for accent chips/rows
+  primaryBorder: 'rgba(255, 91, 58, 0.45)',
 
   // Ground + solid surfaces (no glass).
-  background: '#0E1214', // warm graphite, not pure black
-  surface: '#161B1D', // card
-  surfaceAlt: '#1E2528', // raised / input / lighter panel
-  surfaceLight: '#1E2528', // legacy alias
-  border: '#262E30', // solid hairline
-  borderStrong: '#343E40',
+  background: '#0B0D10', // near-black graphite
+  surface: '#15181D', // card
+  surfaceAlt: '#1D2128', // raised / input / lighter panel
+  surfaceLight: '#1D2128', // legacy alias
+  border: '#252A32', // solid hairline
+  borderStrong: '#323844',
 
-  // Text — soft, tinted toward the ground, never pure white/gray.
-  text: '#E9EDEB',
-  textSecondary: '#9BA5A2',
-  textMuted: '#6A7471',
-  textInverted: '#0C1108', // dark text on accent surfaces
+  // Text — near-white ink; grey only for secondary notes.
+  text: '#F4F6F8',
+  textSecondary: '#AEB4BE',
+  textMuted: '#707784',
+  textInverted: '#0B0D10', // dark text on accent surfaces
 
-  // Semantic — desaturated, not signal-neon.
-  success: '#6F9E63',
-  warning: '#C2924A',
-  danger: '#C05C52',
-  dangerSoft: 'rgba(192, 92, 82, 0.14)',
-  dangerBorder: 'rgba(192, 92, 82, 0.40)',
+  // Semantic.
+  success: '#4ADE80',
+  warning: '#FBBF24',
+  // Error — crimson pulled toward pink, kept apart from the coral accent.
+  danger: '#E2445C',
+  dangerSoft: 'rgba(226, 68, 92, 0.14)',
+  dangerBorder: 'rgba(226, 68, 92, 0.45)',
 
-  // Domain hues — one per area, low chroma.
-  water: '#6E9AC2', // hydration, naturalised from #60A5FA
-  waterSoft: 'rgba(110, 154, 194, 0.14)',
-  nutrition: '#C79A4E', // calories, naturalised from #FBBF24
-  nutritionSoft: 'rgba(199, 154, 78, 0.14)',
+  // Domain hues — the reference palette.
+  water: '#60A5FA',
+  waterSoft: 'rgba(96, 165, 250, 0.16)',
+  nutrition: '#FBBF24',
+  nutritionSoft: 'rgba(251, 191, 36, 0.16)',
 
-  // Macro hues — inside the nutrition family, kept apart but quiet.
-  protein: '#C08E54',
-  carbs: '#93A868',
-  fat: '#B07C62',
+  // Macro hues — three distinct hues so each ring reads apart at a glance.
+  protein: '#9B8CFF', // lavender; moved off orange so it does not sit next to the coral accent
+  carbs: '#FDE047',
+  fat: '#F472B6',
 
   // Rings and tracks.
-  track: '#232A2C',
+  track: '#22262E',
 
   white: '#FFFFFF',
 } as const;
@@ -110,8 +115,16 @@ export const Icon = {
 
 // Elevation is for what floats (sheets, dialogs). Resting cards use a tone
 // step and a hairline instead — never a shadow and a border together.
+// `glow` is the one exception: the primary action of a screen, in the accent hue.
 export const Elevation = {
   card: {},
+  glow: {
+    shadowColor: '#FF5B3A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 8,
+  },
   raised: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },

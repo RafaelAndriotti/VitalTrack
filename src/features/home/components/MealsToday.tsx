@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontSize: FontSize.sm, color: Colors.text, fontFamily: Font.medium },
   kcal: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: Colors.nutrition,
     fontFamily: Font.semibold,
     fontVariant: ['tabular-nums'],
   },

@@ -19,7 +19,6 @@ export interface DayGoal {
 const br = (n: number) => n.toLocaleString('pt-BR');
 
 function GoalRow({ goal: g }: { goal: DayGoal }) {
-  const reached = g.goal > 0 && g.value >= g.goal;
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,7 +28,7 @@ function GoalRow({ goal: g }: { goal: DayGoal }) {
     >
       <View style={[styles.dot, { backgroundColor: g.color }]} />
       <Text style={styles.rowLabel}>{g.label}</Text>
-      <Text style={[styles.rowValue, reached && { color: g.color }]}>
+      <Text style={[styles.rowValue, { color: g.color }]}>
         {g.readout ?? `${br(g.value)} / ${br(g.goal)} ${g.unit}`}
       </Text>
       <ChevronRight size={Icon.sm} color={Colors.textMuted} strokeWidth={Icon.stroke} />
@@ -49,12 +48,15 @@ export function DayRings({ goals }: { goals: DayGoal[] }) {
     <Card style={styles.card}>
       <Ring
         arcs={goals.map((g) => ({ value: g.value, max: g.goal, color: g.color, label: g.label }))}
-        size={184}
-        stroke={12}
+        size={200}
+        stroke={15}
         gap={5}
       >
-        <Text style={styles.count}>{reached}</Text>
-        <Text style={styles.countLabel}>de {goals.length} metas</Text>
+        <Text style={styles.count}>
+          {reached}
+          <Text style={styles.countOf}>/{goals.length}</Text>
+        </Text>
+        <Text style={styles.countLabel}>metas</Text>
       </Ring>
 
       <View style={styles.rows}>
@@ -70,13 +72,14 @@ const styles = StyleSheet.create({
   card: { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg },
 
   count: {
-    fontSize: FontSize.xxl,
+    fontSize: FontSize.display,
     fontFamily: Font.bold,
     color: Colors.text,
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
-  countLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: Font.medium, marginTop: 2 },
+  countOf: { fontSize: FontSize.xl, color: Colors.textMuted, fontFamily: Font.semibold },
+  countLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: Font.medium, marginTop: -2 },
 
   rows: { alignSelf: 'stretch', gap: 2 },
   row: {

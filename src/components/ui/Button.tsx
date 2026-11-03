@@ -1,7 +1,7 @@
 import { Pressable, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Colors, Spacing, FontSize, BorderRadius, Font } from '@/constants/theme';
+import { Colors, Spacing, FontSize, BorderRadius, Font, Elevation } from '@/constants/theme';
 
 type Variant = 'primary' | 'secondary' | 'soft' | 'danger';
 type Size = 'md' | 'sm';
@@ -15,6 +15,8 @@ interface ButtonProps {
   icon?: ReactNode;
   loading?: boolean;
   disabled?: boolean;
+  /** Brilho no tom do acento — só na ação principal da tela. */
+  glow?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -26,6 +28,7 @@ export function Button({
   icon,
   loading = false,
   disabled = false,
+  glow = false,
   style,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -39,6 +42,7 @@ export function Button({
         s.base,
         size === 'sm' ? s.sm : s.md,
         variantStyle[variant],
+        glow && !isDisabled && Elevation.glow,
         pressed && s.pressed,
         isDisabled && s.disabled,
         style,

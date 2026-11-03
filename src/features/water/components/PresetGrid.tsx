@@ -29,7 +29,7 @@ export function PresetGrid({ amount, goal, onAdd }: PresetGridProps) {
               disabled={exceeds}
               onPress={() => onAdd(r.ml)}
             >
-              <r.icon size={Icon.md} color={Colors.textSecondary} strokeWidth={Icon.stroke} />
+              <r.icon size={Icon.md} color={Colors.water} strokeWidth={Icon.stroke} />
               <Text style={styles.ml}>{r.ml} ml</Text>
               <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
             </Pressable>

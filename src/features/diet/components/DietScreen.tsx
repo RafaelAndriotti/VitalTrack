@@ -7,7 +7,7 @@ import { MacroSummary } from './MacroSummary';
 import { MealCard } from './MealCard';
 import { AddMealModal } from './AddMealModal';
 import { AddFoodModal } from './AddFoodModal';
-import { Colors, Spacing, FontSize, BorderRadius, Font, Icon } from '@/constants/theme';
+import { Colors, Spacing, FontSize, BorderRadius, Font, Icon, Elevation } from '@/constants/theme';
 import { useBusy } from '@/lib/useBusy';
 import type { Meal } from '@/types';
 
@@ -62,7 +62,7 @@ export function DietScreen() {
               setShowAddMeal(true);
             }}
           >
-            <Plus size={Icon.sm} color={Colors.primary} strokeWidth={Icon.stroke} />
+            <Plus size={Icon.sm} color={Colors.textInverted} strokeWidth={2} />
             <Text style={styles.addMealBtnText}>Refeição</Text>
           </Pressable>
         </View>
@@ -109,12 +109,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    backgroundColor: Colors.primarySoft,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
+    height: 40,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.primaryBorder,
+    ...Elevation.glow,
   },
-  addMealBtnText: { color: Colors.primary, fontSize: FontSize.sm, fontFamily: Font.semibold },
+  addMealBtnText: { color: Colors.textInverted, fontSize: FontSize.sm, fontFamily: Font.semibold },
 });

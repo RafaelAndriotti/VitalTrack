@@ -39,8 +39,8 @@ export function WaterHero({ amount, goal, goalInput, onGoalChange, onGoalCommit 
 
       <Ring
         arcs={[{ value: amount, max: goal, color: Colors.water, label: 'Hidratação' }]}
-        size={184}
-        stroke={14}
+        size={204}
+        stroke={16}
       >
         <Text style={styles.amount}>{br(amount)}</Text>
         <Text style={styles.unit}>ml de {br(goal)}</Text>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
 
   amount: {
-    fontSize: FontSize.xxl,
+    fontSize: FontSize.display,
     fontFamily: Font.bold,
     color: Colors.text,
     letterSpacing: -1,

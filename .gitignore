@@ -17,4 +17,4 @@ backup*
 
 
 expo-env.d.ts
-rm
+rm.env.local

@@ -1,23 +1,17 @@
-import { View, Text, StyleSheet } from 'react-native';
 import { Screen, Loading, ErrorBanner } from '@/components/ui';
 import { useAuth } from '@/features/auth/AuthContext';
 import { CALORIE_GOAL } from '@/features/diet/constants';
 import { DEFAULT_WATER_GOAL } from '@/features/water/constants';
 import { useHomeData } from '@/features/home/hooks/useHomeData';
-import { todayISO } from '@/lib/date';
+import { todayISO, currentWeek, streakDays } from '@/lib/date';
 import { WorkoutHeroCard } from './WorkoutHeroCard';
 import { DayRings } from './DayRings';
 import type { DayGoal } from './DayRings';
 import { MealsToday } from './MealsToday';
-import { Colors, Spacing, FontSize, Font } from '@/constants/theme';
+import { HomeHeader } from './HomeHeader';
+import { WeekStrip } from './WeekStrip';
+import { Colors } from '@/constants/theme';
 import type { Workout } from '@/types';
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Bom dia';
-  if (h < 18) return 'Boa tarde';
-  return 'Boa noite';
-}
 
 /**
  * Progresso do treino de hoje, honesto: séries marcadas sobre séries do treino.
@@ -45,7 +39,7 @@ export function HomeScreen() {
     .flatMap((m) => m.meal_items || [])
     .reduce((sum, item) => sum + Number(item.calories), 0);
   const training = trainingProgress(workouts);
-  const firstName = user?.name?.split(' ')[0] ?? '';
+  const trained = new Set(workouts.filter((w) => w.completed).map((w) => w.date));
 
   const goals: DayGoal[] = [
     {
@@ -79,10 +73,9 @@ export function HomeScreen() {
     <Screen onRefresh={refresh} refreshing={refreshing}>
       <ErrorBanner message={error} />
 
-      <View style={styles.greetBlock}>
-        <Text style={styles.greet}>{greeting()},</Text>
-        <Text style={styles.name}>{firstName}</Text>
-      </View>
+      <HomeHeader name={user?.name ?? ''} streak={streakDays(trained)} />
+
+      <WeekStrip week={currentWeek()} trained={trained} />
 
       <DayRings goals={goals} />
 
@@ -92,9 +85,3 @@ export function HomeScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  greetBlock: { marginTop: Spacing.sm, marginBottom: Spacing.xs },
-  greet: { fontSize: FontSize.md, color: Colors.textSecondary, fontFamily: Font.regular },
-  name: { fontSize: FontSize.xxl, color: Colors.text, fontFamily: Font.bold, letterSpacing: -0.5 },
-});

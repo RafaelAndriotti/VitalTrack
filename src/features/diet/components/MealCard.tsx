@@ -24,18 +24,11 @@ export function MealCard({ meal, onAddFood, onDelete, onDeleteFood }: MealCardPr
             {meal.time ? `${meal.time} · ` : ''}{meal.name}
           </Text>
           <Text style={styles.subtitle}>
-            {protein.toFixed(0)}g proteína · {calories.toLocaleString('pt-BR')} kcal
+            <Text style={styles.kcal}>{calories.toLocaleString('pt-BR')} kcal</Text>
+            {` · ${protein.toFixed(0)}g proteína`}
           </Text>
         </View>
         <View style={styles.actions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Adicionar alimento"
-            style={styles.addFoodBtn}
-            onPress={() => onAddFood(meal)}
-          >
-            <Plus size={Icon.sm} color={Colors.text} strokeWidth={Icon.stroke} />
-          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Excluir refeição"
@@ -72,6 +65,16 @@ export function MealCard({ meal, onAddFood, onDelete, onDeleteFood }: MealCardPr
           ))}
         </View>
       ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Adicionar alimento em ${meal.name}`}
+        style={({ pressed }) => [styles.addFoodBtn, pressed && styles.addFoodPressed]}
+        onPress={() => onAddFood(meal)}
+      >
+        <Plus size={Icon.sm} color={Colors.primary} strokeWidth={2} />
+        <Text style={styles.addFoodText}>Adicionar alimento</Text>
+      </Pressable>
     </Card>
   );
 }
@@ -80,23 +83,29 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.sm },
   title: { fontSize: FontSize.md, fontFamily: Font.semibold, color: Colors.text },
   subtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2, fontFamily: Font.regular },
-  actions: { flexDirection: 'row', gap: Spacing.xs },
+  kcal: { color: Colors.nutrition, fontFamily: Font.semibold, fontVariant: ['tabular-nums'] },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   addFoodBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primarySoft,
+    borderWidth: 1,
+    borderColor: Colors.primaryBorder,
   },
+  addFoodPressed: { opacity: 0.8 },
+  addFoodText: { fontSize: FontSize.sm, color: Colors.primary, fontFamily: Font.semibold },
   deleteMealBtn: { width: 36, height: 36, borderRadius: BorderRadius.full, justifyContent: 'center', alignItems: 'center' },
 
   foodList: { borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.md, marginTop: Spacing.md, gap: Spacing.sm },
-  foodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  foodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md },
   foodName: { fontSize: FontSize.md, color: Colors.text, fontFamily: Font.medium },
   foodMacros: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2, fontFamily: Font.regular },
   foodRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  foodKcal: { fontSize: FontSize.sm, color: Colors.text, fontFamily: Font.semibold },
+  foodKcal: { fontSize: FontSize.sm, color: Colors.text, fontFamily: Font.semibold, fontVariant: ['tabular-nums'] },
 });

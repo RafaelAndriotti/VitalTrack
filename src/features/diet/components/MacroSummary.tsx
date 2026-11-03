@@ -9,8 +9,8 @@ const br = (n: number) => n.toLocaleString('pt-BR');
 function MacroRing({ label, grams, goal, color }: { label: string; grams: number; goal: number; color: string }) {
   return (
     <View style={styles.macro}>
-      <Ring arcs={[{ value: grams, max: goal, color, label }]} size={76} stroke={7}>
-        <Text style={styles.macroGram}>{grams.toFixed(0)}</Text>
+      <Ring arcs={[{ value: grams, max: goal, color, label }]} size={80} stroke={8}>
+        <Text style={[styles.macroGram, { color }]}>{grams.toFixed(0)}</Text>
         <Text style={styles.macroUnit}>g</Text>
       </Ring>
       <Text style={styles.macroLabel}>{label}</Text>
@@ -31,8 +31,8 @@ export function MacroSummary({ meals }: { meals: Meal[] }) {
     <Card style={styles.card}>
       <Ring
         arcs={[{ value: calories, max: CALORIE_GOAL, color: Colors.nutrition, label: 'Calorias' }]}
-        size={184}
-        stroke={14}
+        size={204}
+        stroke={16}
       >
         <Text style={styles.calories}>{br(calories)}</Text>
         <Text style={styles.caloriesUnit}>kcal de {br(CALORIE_GOAL)}</Text>
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   card: { alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg },
 
   calories: {
-    fontSize: FontSize.xxl,
+    fontSize: FontSize.display,
     fontFamily: Font.bold,
     color: Colors.text,
     letterSpacing: -1,

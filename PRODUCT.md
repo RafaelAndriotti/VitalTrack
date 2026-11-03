@@ -48,15 +48,18 @@ Serves two goals with equal weight: a portfolio-grade demonstration of craft (UI
 - Typeface: **Poppins** (`@expo-google-fonts`) — in use across the app.
 - Icon set: `lucide-react-native`.
 - Dark base color present in identity: `#0F172A` (Android adaptive icon background); `userInterfaceStyle` is `automatic`.
-- Direction: **Vital Natural** (contract at the top of `src/constants/theme.ts`). Warm graphite ground
-  `#0E1214`; one hue per domain, all desaturated — training/primary `#8FB255`, hydration `#6E9AC2`,
-  nutrition `#C79A4E`. The hues come from the neon reference palette (lime `#A3E635`, blue `#60A5FA`,
-  amber `#FBBF24`) with the chroma pulled down: the app must read natural, never neon-on-black.
-- Refused, by the owner's decision: neon accents, glow, glass, gradients, shadows on resting cards.
-  Surfaces separate by a tone step plus a 1px hairline.
+- Direction: **Vital Pulse** (contract at the top of `src/constants/theme.ts`). Near-black graphite
+  ground `#0B0D10`; the reference palette at full strength, one hue per domain — training/primary
+  coral `#FF5B3A`, hydration blue `#60A5FA`, nutrition amber `#FBBF24`; macros lavender `#9B8CFF`,
+  yellow `#FDE047`, pink `#F472B6`; error crimson `#E2445C`. Replaced *Vital Natural* (desaturated), which the owner found
+  washed out and unappealing.
+- Allowed: a soft glow in the accent hue on the one primary action of a screen. Refused: gradients,
+  glass, glow on resting cards, photos or figures the user did not produce.
 - Signature element: **"o dia em três anéis"** — training, nutrition and hydration as concentric arcs
-  on the home screen (`src/components/ui/Ring.tsx`, `src/features/home/components/DayRings.tsx`), one
-  hue each. The same ring carries the single figure on the diet and hydration screens.
+  on the home screen (`src/components/ui/Ring.tsx`, `src/features/home/components/DayRings.tsx`), with
+  the week strip and the workout streak above it (`WeekStrip.tsx`, `HomeHeader.tsx`). The same ring
+  carries the single figure on the diet and hydration screens; hydration adds the week in bars
+  (`src/features/water/components/WeekBars.tsx`).
 
 ## Evidence on Hand
 
