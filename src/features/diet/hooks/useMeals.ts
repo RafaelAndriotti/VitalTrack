@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { mealsApi } from '@/features/diet/api';
+import { mealBandFor } from '@/features/diet/constants';
 import { errorMessage, rawErrorMessage } from '@/services/http';
 import { todayISO } from '@/lib/date';
 import type { Meal, FoodLibraryItem, CreateMealItemPayload, CreateLibraryFoodPayload } from '@/types';
@@ -12,6 +13,8 @@ function sortByTime(list: Meal[]): Meal[] {
     return a.time.localeCompare(b.time);
   });
 }
+
+const pad = (n: number) => String(n).padStart(2, '0');
 
 export function useMeals() {
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -68,11 +71,46 @@ export function useMeals() {
       'Erro ao criar refeição'
     );
 
+  /**
+   * Refeição de destino para "Alimento": a do horário atual, se já existir; senão cria
+   * a refeição da faixa (Café da manhã, Almoço…) com o horário de agora.
+   */
+  const ensureMealForNow = async (): Promise<Meal | null> => {
+    try {
+      setError('');
+      const now = new Date();
+      const band = mealBandFor(now.getHours());
+      const todays = await mealsApi.list(todayISO());
+      const inBand = todays.find((m) => {
+        if (!m.time) return false;
+        const h = Number(m.time.split(':')[0]);
+        return band.fromHour < band.toHour
+          ? h >= band.fromHour && h < band.toHour
+          : h >= band.fromHour || h < band.toHour;
+      });
+      if (inBand) return inBand;
+      const created = await mealsApi.create({
+        name: band.name,
+        date: todayISO(),
+        time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      });
+      await load();
+      return created;
+    } catch (err) {
+      setError(errorMessage(err, 'Erro ao preparar refeição'));
+      return null;
+    }
+  };
+
   const removeMeal = (mealId: string) =>
     run(() => mealsApi.remove(mealId), 'Erro ao deletar refeição');
 
   const removeFood = (mealId: string, itemId: string) =>
     run(() => mealsApi.removeItem(mealId, itemId), 'Erro ao deletar alimento');
+
+  /** Desfazer de exclusão de alimento: recria o item com os mesmos valores. */
+  const restoreFood = (mealId: string, item: CreateMealItemPayload) =>
+    run(() => mealsApi.addItem(mealId, item), 'Erro ao desfazer exclusão');
 
   const addLibraryFoodToMeal = (mealId: string, item: CreateMealItemPayload) =>
     run(() => mealsApi.addItem(mealId, item), 'Erro ao adicionar alimento da biblioteca');
@@ -131,8 +169,10 @@ export function useMeals() {
     clearError: () => setError(''),
     refresh,
     addMeal,
+    ensureMealForNow,
     removeMeal,
     removeFood,
+    restoreFood,
     addLibraryFoodToMeal,
     addCustomFoodToMeal,
   };

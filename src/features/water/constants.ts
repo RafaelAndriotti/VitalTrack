@@ -1,19 +1,12 @@
-import { CupSoda, GlassWater, Milk } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
-
 export const DEFAULT_WATER_GOAL = 2000;
 // Limite aceito pelo backend para amount_ml/goal_ml.
 export const MAX_WATER_ML = 50000;
 
-// Cada quantidade é um recipiente que armazena água: ícone, nome e capacidade.
-export type Recipiente = { ml: number; label: string; icon: LucideIcon };
-
-export const RECIPIENTES: Recipiente[] = [
-  { ml: 100, label: 'Dose', icon: CupSoda },
-  { ml: 200, label: 'Copo pequeno', icon: GlassWater },
-  { ml: 250, label: 'Copo', icon: GlassWater },
-  { ml: 300, label: 'Copo grande', icon: GlassWater },
-  { ml: 500, label: 'Garrafa', icon: Milk },
-  { ml: 750, label: 'Garrafa grande', icon: Milk },
-  { ml: 1000, label: 'Garrafão', icon: Milk },
-];
+// Meta ajustada com +/− : faixa e passo da tela (o backend aceita mais).
+export const WATER_GOAL_MIN = 500;
+export const WATER_GOAL_MAX = 5000;
+export const WATER_GOAL_STEP = 250;
+// Pausa após o último toque no +/− antes de salvar a meta.
+export const WATER_GOAL_DEBOUNCE_MS = 600;
+// Tempo em que o toast "Desfazer" fica visível.
+export const UNDO_WINDOW_MS = 4000;

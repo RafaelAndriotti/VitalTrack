@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { waterApi } from '@/features/water/api';
-import { DEFAULT_WATER_GOAL, MAX_WATER_ML } from '@/features/water/constants';
+import {
+  DEFAULT_WATER_GOAL,
+  WATER_GOAL_MAX,
+  WATER_GOAL_MIN,
+  WATER_GOAL_DEBOUNCE_MS,
+  WATER_GOAL_STEP,
+} from '@/features/water/constants';
 import { errorMessage, rawErrorMessage } from '@/services/http';
 import { todayISO } from '@/lib/date';
 import type { DailyWater } from '@/types';
+
+export type GoalStatus = 'idle' | 'saving' | 'saved';
 
 export function useWater() {
   const [daily, setDaily] = useState<DailyWater | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [goalInput, setGoalInput] = useState(String(DEFAULT_WATER_GOAL));
+  const [goalStatus, setGoalStatus] = useState<GoalStatus>('idle');
   // Espelho síncrono do estado: toques rápidos não calculam sobre valor velho.
   const latest = useRef<DailyWater | null>(null);
   // Sequência de operações (envios e recargas): só a mais recente aplica resposta
   // ou reverte; respostas fora de ordem são descartadas.
   const seq = useRef(0);
+  // Meta: o ajuste com +/− é salvo depois de uma pausa, não a cada toque.
+  const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const apply = useCallback((next: DailyWater | null) => {
     latest.current = next;
@@ -44,12 +54,9 @@ export function useWater() {
     }, [refetch])
   );
 
-  // Sincroniza o texto do campo de meta quando o valor chega do servidor,
-  // sem sobrescrever o que o usuário está digitando (só reage a goal_ml).
-  const goalMl = daily?.goal_ml;
-  useEffect(() => {
-    setGoalInput(goalMl !== undefined ? String(goalMl) : String(DEFAULT_WATER_GOAL));
-  }, [goalMl]);
+  useEffect(() => () => {
+    if (goalTimer.current) clearTimeout(goalTimer.current);
+  }, []);
 
   const optimistic = (amount_ml: number, goal_ml: number): DailyWater => ({
     id: latest.current?.id ?? '',
@@ -59,17 +66,20 @@ export function useWater() {
     goal_ml,
   });
 
-  /** Soma (ou subtrai, se negativo) `ml` ao total do dia. */
-  async function addWater(ml: number) {
+  /**
+   * Soma (ou subtrai, se negativo) `ml` ao total do dia.
+   * Retorna false quando a soma seria recusada (passaria da meta).
+   */
+  async function addWater(ml: number): Promise<boolean> {
     const currentAmount = latest.current?.amount_ml ?? 0;
     const currentGoal = latest.current?.goal_ml ?? DEFAULT_WATER_GOAL;
     // Ao adicionar, o total não pode ultrapassar a meta. Para registrar mais,
     // o usuário precisa aumentar a meta primeiro.
     if (ml > 0 && currentAmount + ml > currentGoal) {
       setError(
-        `Meta de ${currentGoal.toLocaleString('pt-BR')} ml atingida. Aumente a meta para registrar mais.`
+        `Passa a meta em ${(currentAmount + ml - currentGoal).toLocaleString('pt-BR')} ml. Aumente a meta ou use um valor menor.`
       );
-      return;
+      return false;
     }
     setError('');
     const next = Math.max(0, currentAmount + ml);
@@ -84,36 +94,37 @@ export function useWater() {
       });
       if (mine === seq.current) apply(saved);
     } catch (err) {
-      if (mine !== seq.current) return;
+      if (mine !== seq.current) return true;
       setError(errorMessage(err, 'Erro ao registrar água'));
       void refetch({ keepError: true });
     }
+    return true;
   }
 
-  async function commitGoal() {
-    const num = parseInt(goalInput, 10);
-    if (isNaN(num) || num <= 0) {
-      // Texto inválido/vazio: restaura o valor válido atual em vez de gravar lixo.
-      setGoalInput(latest.current ? String(latest.current.goal_ml) : String(DEFAULT_WATER_GOAL));
-      return;
-    }
-    if (num > MAX_WATER_ML) {
-      setError(`A meta máxima é ${MAX_WATER_ML.toLocaleString('pt-BR')} ml.`);
-      setGoalInput(latest.current ? String(latest.current.goal_ml) : String(DEFAULT_WATER_GOAL));
-      return;
-    }
-    // onBlur e onSubmitEditing disparam ambos: sem mudança, não envia.
-    if (num === (latest.current?.goal_ml ?? DEFAULT_WATER_GOAL)) {
-      setGoalInput(String(num));
-      return;
-    }
-    apply(optimistic(latest.current?.amount_ml ?? 0, num));
+  /** Muda a meta em passos de 250 ml. Salva após a pausa de digitação. */
+  function stepGoal(delta: number) {
+    const current = latest.current?.goal_ml ?? DEFAULT_WATER_GOAL;
+    const next = Math.min(WATER_GOAL_MAX, Math.max(WATER_GOAL_MIN, current + delta * WATER_GOAL_STEP));
+    if (next === current) return;
+    apply(optimistic(latest.current?.amount_ml ?? 0, next));
+    setGoalStatus('saving');
+    if (goalTimer.current) clearTimeout(goalTimer.current);
+    goalTimer.current = setTimeout(() => void saveGoal(), WATER_GOAL_DEBOUNCE_MS);
+  }
+
+  async function saveGoal() {
+    goalTimer.current = null;
+    const goal = latest.current?.goal_ml ?? DEFAULT_WATER_GOAL;
     const mine = ++seq.current;
     try {
-      const saved = await waterApi.save({ date: todayISO(), goal_ml: num });
-      if (mine === seq.current) apply(saved);
+      const saved = await waterApi.save({ date: todayISO(), goal_ml: goal });
+      if (mine === seq.current) {
+        apply(saved);
+        setGoalStatus('saved');
+      }
     } catch (err) {
       if (mine !== seq.current) return;
+      setGoalStatus('idle');
       setError(errorMessage(err, 'Erro ao atualizar meta'));
       void refetch({ keepError: true });
     }
@@ -124,9 +135,8 @@ export function useWater() {
     error,
     amount: daily?.amount_ml ?? 0,
     goal: daily?.goal_ml ?? DEFAULT_WATER_GOAL,
-    goalInput,
-    setGoalInput,
+    goalStatus,
     addWater,
-    commitGoal,
+    stepGoal,
   };
 }

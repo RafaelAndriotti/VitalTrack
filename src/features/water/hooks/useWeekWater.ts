@@ -6,8 +6,10 @@ import type { WeekDay } from '@/lib/date';
 import type { DailyWater } from '@/types';
 
 export interface WaterDay extends WeekDay {
-  /** null em dia futuro ou quando o dia não pôde ser carregado. */
+  /** null em dia futuro, em hoje (vem do estado ao vivo) ou quando o dia falhou. */
   water: DailyWater | null;
+  /** true quando a busca deste dia falhou: a barra mostra "—" e toque recarrega o dia. */
+  failed: boolean;
 }
 
 /**
@@ -16,22 +18,34 @@ export interface WaterDay extends WeekDay {
  * acompanha o toque sem esperar uma recarga.
  */
 export function useWeekWater() {
-  const [days, setDays] = useState<WaterDay[]>(() => currentWeek().map((d) => ({ ...d, water: null })));
+  const [days, setDays] = useState<WaterDay[]>(() =>
+    currentWeek().map((d) => ({ ...d, water: null, failed: false }))
+  );
 
   const refetch = useCallback(async () => {
     const week = currentWeek();
     const loaded = await Promise.all(
-      week.map(async (d) => {
-        if (d.isFuture || d.isToday) return { ...d, water: null };
+      week.map(async (d): Promise<WaterDay> => {
+        if (d.isFuture || d.isToday) return { ...d, water: null, failed: false };
         try {
-          return { ...d, water: await waterApi.get(d.iso) };
+          return { ...d, water: await waterApi.get(d.iso), failed: false };
         } catch {
-          // Um dia que falha vira lacuna no gráfico; não derruba a tela.
-          return { ...d, water: null };
+          // Um dia que falha não derruba a semana: fica marcado para o usuário recarregar.
+          return { ...d, water: null, failed: true };
         }
       })
     );
     setDays(loaded);
+  }, []);
+
+  /** Recarrega um único dia (toque na barra com "—"). */
+  const reloadDay = useCallback(async (iso: string) => {
+    try {
+      const water = await waterApi.get(iso);
+      setDays((prev) => prev.map((d) => (d.iso === iso ? { ...d, water, failed: false } : d)));
+    } catch {
+      // Continua marcado como falha; o usuário pode tentar de novo.
+    }
   }, []);
 
   useFocusEffect(
@@ -40,5 +54,5 @@ export function useWeekWater() {
     }, [refetch])
   );
 
-  return days;
+  return { days, reloadDay };
 }

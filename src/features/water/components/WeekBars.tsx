@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Card } from '@/components/ui';
 import type { WaterDay } from '@/features/water/hooks/useWeekWater';
 import { Colors, Spacing, FontSize, BorderRadius, Font } from '@/constants/theme';
@@ -8,6 +8,8 @@ interface WeekBarsProps {
   /** Valores ao vivo de hoje (a tela já os tem; não esperam recarga). */
   todayAmount: number;
   todayGoal: number;
+  /** Recarrega o dia que falhou. */
+  onReloadDay: (iso: string) => void;
 }
 
 const BAR_HEIGHT = 132;
@@ -18,13 +20,14 @@ const liters = (ml: number) => (ml === 0 ? '0' : (ml / 1000).toLocaleString('pt-
 /**
  * A semana em barras: cada barra mede o dia contra a sua própria meta, então o
  * topo da trilha é sempre "meta atingida". Dia na meta fica no azul cheio; dia
- * abaixo, no mesmo azul mais fraco; dia futuro mostra só a trilha.
+ * abaixo, no mesmo azul mais fraco; dia futuro mostra só a trilha; dia que falhou
+ * mostra "—" e toque recarrega.
  */
-export function WeekBars({ days, todayAmount, todayGoal }: WeekBarsProps) {
+export function WeekBars({ days, todayAmount, todayGoal, onReloadDay }: WeekBarsProps) {
   const rows = days.map((d) => {
     const amount = d.isToday ? todayAmount : (d.water?.amount_ml ?? 0);
     const goal = d.isToday ? todayGoal : (d.water?.goal_ml ?? todayGoal);
-    return { ...d, amount, goal, met: !d.isFuture && goal > 0 && amount >= goal };
+    return { ...d, amount, goal, met: !d.isFuture && !d.failed && goal > 0 && amount >= goal };
   });
 
   const elapsed = rows.filter((d) => !d.isFuture).length;
@@ -47,29 +50,42 @@ export function WeekBars({ days, todayAmount, todayGoal }: WeekBarsProps) {
       >
         {rows.map((d) => {
           const pct = d.goal > 0 ? Math.min(d.amount / d.goal, 1) : 0;
-          return (
-            <View key={d.iso} style={styles.col}>
-              <Text style={[styles.value, d.isToday && styles.valueToday, d.isFuture && styles.valueFuture]}>
-                {d.isFuture ? '' : liters(d.amount)}
+          const label = d.failed ? '—' : d.isFuture ? '' : liters(d.amount);
+          const column = (
+            <>
+              <Text style={[styles.value, d.isToday && styles.valueToday, d.isFuture && styles.valueFuture, d.failed && styles.valueFailed]}>
+                {label}
               </Text>
               <View style={styles.track}>
-                {pct > 0 ? (
-                  <View
-                    style={[
-                      styles.fill,
-                      { height: `${pct * 100}%` },
-                      !d.met && styles.fillUnder,
-                    ]}
-                  />
+                {pct > 0 && !d.failed ? (
+                  <View style={[styles.fill, { height: `${pct * 100}%` }, !d.met && styles.fillUnder]} />
                 ) : null}
               </View>
               <Text style={[styles.weekday, d.isToday && styles.weekdayToday]}>{d.weekday}</Text>
+            </>
+          );
+          if (d.failed) {
+            return (
+              <Pressable
+                key={d.iso}
+                accessibilityRole="button"
+                accessibilityLabel={`${d.weekday}: não carregou. Toque para tentar de novo`}
+                style={styles.col}
+                onPress={() => onReloadDay(d.iso)}
+              >
+                {column}
+              </Pressable>
+            );
+          }
+          return (
+            <View key={d.iso} style={styles.col}>
+              {column}
             </View>
           );
         })}
       </View>
 
-      <Text style={styles.caption}>Litros por dia · topo da barra = meta do dia</Text>
+      <Text style={styles.caption}>Litros por dia · topo da barra = meta do dia · "—" = não carregou, toque para tentar</Text>
     </Card>
   );
 }
@@ -92,6 +108,7 @@ const styles = StyleSheet.create({
   },
   valueToday: { color: Colors.water, fontFamily: Font.bold },
   valueFuture: { color: Colors.textMuted },
+  valueFailed: { color: Colors.textMuted, fontFamily: Font.bold },
   track: {
     width: '100%',
     maxWidth: 28,

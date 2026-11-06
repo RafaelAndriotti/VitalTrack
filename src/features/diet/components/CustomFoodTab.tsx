@@ -23,16 +23,16 @@ export function CustomFoodTab({ form, saving, onSubmit }: CustomFoodTabProps) {
       />
       <View style={styles.grid}>
         <View style={styles.gridField}>
-          <FormField label="Kcal" keyboardType="numeric" value={form.calories} onChangeText={(t) => form.setCalories(sanitizeNumeric(t))} maxLength={7} />
+          <FormField label="Kcal por 100 g"keyboardType="numeric" value={form.calories} onChangeText={(t) => form.setCalories(sanitizeNumeric(t))} maxLength={7} />
         </View>
         <View style={styles.gridField}>
-          <FormField label="Proteína (g)" keyboardType="numeric" value={form.protein} onChangeText={(t) => form.setProtein(sanitizeNumeric(t))} maxLength={7} />
+          <FormField label="Proteína por 100 g"keyboardType="numeric" value={form.protein} onChangeText={(t) => form.setProtein(sanitizeNumeric(t))} maxLength={7} />
         </View>
         <View style={styles.gridField}>
-          <FormField label="Carbo (g)" keyboardType="numeric" value={form.carbs} onChangeText={(t) => form.setCarbs(sanitizeNumeric(t))} maxLength={7} />
+          <FormField label="Carbo por 100 g"keyboardType="numeric" value={form.carbs} onChangeText={(t) => form.setCarbs(sanitizeNumeric(t))} maxLength={7} />
         </View>
         <View style={styles.gridField}>
-          <FormField label="Gordura (g)" keyboardType="numeric" value={form.fat} onChangeText={(t) => form.setFat(sanitizeNumeric(t))} maxLength={7} />
+          <FormField label="Gordura por 100 g"keyboardType="numeric" value={form.fat} onChangeText={(t) => form.setFat(sanitizeNumeric(t))} maxLength={7} />
         </View>
       </View>
       <Button label="Salvar e adicionar" loading={saving} onPress={onSubmit} />

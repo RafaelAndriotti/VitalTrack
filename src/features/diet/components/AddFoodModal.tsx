@@ -88,7 +88,13 @@ export function AddFoodModal({
       </View>
 
       {tab === 'library' ? (
-        <LibraryFoodTab foods={foodLibrary} form={form} saving={busy} onSubmit={submitLibrary} />
+        <LibraryFoodTab
+          foods={foodLibrary}
+          form={form}
+          saving={busy}
+          onSubmit={submitLibrary}
+          onCreate={() => changeTab('custom')}
+        />
       ) : (
         <CustomFoodTab form={form} saving={busy} onSubmit={submitCustom} />
       )}
