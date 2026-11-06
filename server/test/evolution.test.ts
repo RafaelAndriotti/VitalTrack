@@ -114,3 +114,25 @@ test("evolution route: reflects a completed workout with one done set", async ()
   assert.equal(res.body.kcal_estimated, true);
   assert.equal(res.body.highlight.exercise, "Supino");
 });
+
+test("evolution: warmup sets do not count in volume, kcal or highlight", () => {
+  const workouts: EvoWorkout[] = [
+    {
+      date: "2026-11-06",
+      completed: true,
+      exercises: [
+        {
+          name: "Supino",
+          sets: [
+            { weight: 20, reps: 15, completed: true, kind: "warmup" },
+            { weight: 60, reps: 8, completed: true, kind: "work" },
+          ],
+        },
+      ],
+    },
+  ];
+  const r = buildEvolution({ workouts, periodDays: 7, today: TODAY, weightKg: 70 });
+  assert.equal(r.current.volume_kg, 480); // só a série de trabalho
+  assert.equal(r.current.kcal, 18); // 1 série de trabalho, 70 kg
+  assert.equal(r.highlight?.max_kg, 60);
+});

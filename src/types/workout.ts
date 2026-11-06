@@ -1,6 +1,11 @@
+export type SetKind = 'warmup' | 'work' | 'drop' | 'failure';
+
 export interface ExerciseSet {
   id: string;
   exercise_id: string;
+  kind: SetKind;
+  /** Nome dado pelo usuário; null = rótulo automático. */
+  label: string | null;
   weight: number;
   reps: number;
   completed: boolean;
@@ -24,6 +29,8 @@ export interface Workout {
   notes: string | null;
   muscle_groups: string[];
   created_at: string;
+  /** Modelo do qual o treino foi iniciado; null = treino livre. */
+  source_template_id: string | null;
   exercises: Exercise[];
   /** Calorias estimadas pelas séries concluídas (calculado no backend). */
   calories_burned: number;
@@ -58,6 +65,8 @@ export interface CreateExercisePayload {
 export type UpdateExercisePayload = Partial<CreateExercisePayload>;
 
 export interface CreateSetPayload {
+  kind?: SetKind;
+  label?: string | null;
   weight: number;
   reps: number;
   completed: boolean;
@@ -105,4 +114,46 @@ export interface Evolution {
   buckets: EvolutionBucket[];
   highlight: EvolutionHighlight | null;
   kcal_estimated: boolean;
+}
+
+export interface TemplateSet {
+  id: string;
+  kind: SetKind;
+  label: string | null;
+  planned_reps: number | null;
+  planned_weight: number | null;
+  order_index: number;
+}
+
+export interface TemplateExercise {
+  id: string;
+  name: string;
+  notes: string | null;
+  order_index: number;
+  sets: TemplateSet[];
+}
+
+/** Modelo de treino fixo (ex.: o treino definido pelo personal). */
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  muscle_groups: string[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  exercises: TemplateExercise[];
+}
+
+export interface TemplateSetPayload {
+  kind?: SetKind;
+  label?: string | null;
+  planned_reps?: number | null;
+  planned_weight?: number | null;
+}
+
+export interface TemplatePayload {
+  name: string;
+  muscle_groups?: string[];
+  notes?: string | null;
+  exercises: { name: string; notes?: string | null; sets: TemplateSetPayload[] }[];
 }

@@ -18,7 +18,14 @@ import {
 } from "../controllers/workouts.controller.js";
 import { validate } from "../middlewares/validate.js";
 import { getEvolution } from "../controllers/evolution.controller.js";
-import { evolutionQuery } from "../validators/workouts.validator.js";
+import {
+  listTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  startFromTemplate,
+} from "../controllers/templates.controller.js";
+import { evolutionQuery, templateBody } from "../validators/workouts.validator.js";
 import {
   idParams,
   exerciseParams,
@@ -45,6 +52,13 @@ router.post(
   createExerciseLibrary
 );
 router.delete("/library/exercises/:id", validate({ params: idParams }), deleteExerciseLibrary);
+
+// Modelos de treino (antes de "/:id" para não colidir)
+router.get("/templates", listTemplates);
+router.post("/templates", validate({ body: templateBody }), createTemplate);
+router.put("/templates/:id", validate({ params: idParams, body: templateBody }), updateTemplate);
+router.delete("/templates/:id", validate({ params: idParams }), deleteTemplate);
+router.post("/templates/:id/start", validate({ params: idParams }), startFromTemplate);
 
 // Evolution (antes de "/:id" para não colidir com rotas de treino)
 router.get("/evolution", validate({ query: evolutionQuery }), getEvolution);

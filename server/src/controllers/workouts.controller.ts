@@ -39,6 +39,11 @@ function loadWorkout(workout: WorkoutRow, userWeightKg: number | null): WorkoutR
 
 // Load a single owned workout fully hydrated. Throws (500) if the row is missing;
 // only used right after a successful insert/update.
+// Renderiza um treino já carregado (usado pelo start de modelo).
+export function getWorkoutView(workout: WorkoutRow, userId: string): WorkoutResponse {
+  return loadWorkout(workout, userModel.findWeightKg(userId));
+}
+
 function getWorkout(id: string, userId: string): WorkoutResponse {
   const workout = requireFound(workoutModel.findOwned({ id, userId }));
   return loadWorkout(workout, userModel.findWeightKg(userId));
@@ -223,7 +228,7 @@ export const updateExercise = asyncHandler(
 export const addSet = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId } = req.params;
-    const { weight, reps, completed, order_index } = validatedBody(req, createSetBody);
+    const { kind, label, weight, reps, completed, order_index } = validatedBody(req, createSetBody);
 
     if (!exerciseModel.ownsExercise({
       exerciseId,
@@ -235,6 +240,8 @@ export const addSet = asyncHandler(
 
     const id = exerciseSetModel.create({
       exerciseId,
+      kind,
+      label,
       weight,
       reps,
       completed,
@@ -252,7 +259,7 @@ export const addSet = asyncHandler(
 export const updateSet = asyncHandler(
   async (req, res) => {
     const { id: workoutId, exerciseId, setId } = req.params;
-    const { weight, reps, completed, order_index } = validatedBody(req, updateSetBody);
+    const { kind, label, weight, reps, completed, order_index } = validatedBody(req, updateSetBody);
 
     if (!exerciseModel.ownsExercise({
       exerciseId,
@@ -265,6 +272,8 @@ export const updateSet = asyncHandler(
     const updated = exerciseSetModel.update({
       setId,
       exerciseId,
+      kind,
+      label,
       weight,
       reps,
       completed,

@@ -151,6 +151,52 @@ BEGIN UPDATE food_library SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') 
 CREATE TRIGGER IF NOT EXISTS trg_daily_water_updated_at AFTER UPDATE ON daily_water FOR EACH ROW
 BEGIN UPDATE daily_water SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = OLD.id; END;
 
+-- Modelos de treino (treinos fixos, ex.: o treino definido pelo personal).
+-- Iniciar um modelo copia exercícios e séries para um treino novo (workouts).
+CREATE TABLE IF NOT EXISTS workout_templates (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  muscle_groups TEXT,
+  notes         TEXT,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_templates_user_id ON workout_templates(user_id);
+
+CREATE TABLE IF NOT EXISTS template_exercises (
+  id          TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  notes       TEXT,
+  order_index INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_template_exercises_template ON template_exercises(template_id);
+
+CREATE TABLE IF NOT EXISTS template_sets (
+  id                   TEXT PRIMARY KEY,
+  template_exercise_id TEXT NOT NULL REFERENCES template_exercises(id) ON DELETE CASCADE,
+  kind                 TEXT NOT NULL DEFAULT 'work' CHECK(kind IN ('warmup','work','drop','failure')),
+  label                TEXT,
+  planned_reps         INTEGER,
+  planned_weight       REAL,
+  order_index          INTEGER NOT NULL DEFAULT 0,
+  created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_template_sets_exercise ON template_sets(template_exercise_id);
+
+CREATE TRIGGER IF NOT EXISTS trg_templates_updated_at AFTER UPDATE ON workout_templates FOR EACH ROW
+BEGIN UPDATE workout_templates SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = OLD.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_template_exercises_updated_at AFTER UPDATE ON template_exercises FOR EACH ROW
+BEGIN UPDATE template_exercises SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = OLD.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_template_sets_updated_at AFTER UPDATE ON template_sets FOR EACH ROW
+BEGIN UPDATE template_sets SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = OLD.id; END;
+
 -- Global exercise seeds (user_id NULL). Deduped by unique partial index above.
 -- Wipe globals first so renamed/regrouped entries from older versions do not
 -- linger (only user_id IS NULL rows; user-created exercises are untouched).

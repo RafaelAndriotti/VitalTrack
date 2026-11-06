@@ -1,13 +1,29 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { EmptyState, useDialog } from '@/components/ui';
 import { NewWorkoutCard } from './NewWorkoutCard';
 import { HistoryCard } from './HistoryCard';
+import { TemplatesSection } from './TemplatesSection';
+import { TemplateEditor } from './TemplateEditor';
 import type { WorkoutsApi } from '@/features/workouts/hooks/useWorkouts';
 import { Colors, Spacing, FontSize, Font } from '@/constants/theme';
+import type { WorkoutTemplate } from '@/types';
 
-/** Sem treino em andamento: iniciar novo + histórico. */
+/** Sem treino em andamento: meus treinos (modelos), treino livre e histórico. */
 export function StartPanel({ data }: { data: WorkoutsApi }) {
   const dialog = useDialog();
+  // null = lista; 'new' = criar modelo; objeto = editar esse modelo.
+  const [editing, setEditing] = useState<WorkoutTemplate | 'new' | null>(null);
+
+  if (editing !== null) {
+    return (
+      <TemplateEditor
+        template={editing === 'new' ? undefined : editing}
+        data={data}
+        onDone={() => setEditing(null)}
+      />
+    );
+  }
 
   async function handleReopen(workoutId: string) {
     // Garante no máximo um treino em andamento. (Aqui não há ativo; a checagem
@@ -25,6 +41,10 @@ export function StartPanel({ data }: { data: WorkoutsApi }) {
   return (
     <View style={styles.container}>
       <Text style={styles.headerTitle}>Registro de treino</Text>
+
+      <TemplatesSection data={data} onNew={() => setEditing('new')} onEdit={setEditing} />
+
+      <Text style={styles.sectionTitle}>Treino livre</Text>
       <NewWorkoutCard onStart={data.startWorkout} />
 
       <Text style={styles.sectionTitle}>Histórico</Text>

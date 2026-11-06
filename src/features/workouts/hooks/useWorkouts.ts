@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { workoutsApi } from '@/features/workouts/api';
-import { errorMessage, rawErrorMessage } from '@/services/http';
-import type { Workout, ExerciseSet, ExerciseLibraryItem, UpdateSetPayload } from '@/types';
+import { ApiError, errorMessage, rawErrorMessage } from '@/services/http';
+import type { Workout, ExerciseSet, ExerciseLibraryItem, UpdateSetPayload, WorkoutTemplate, TemplatePayload } from '@/types';
 
 interface RunOptions {
   /** Se `false`, não exibe o banner de erro (o chamador trata). */
@@ -11,6 +11,7 @@ interface RunOptions {
 export function useWorkouts() {
   const [workouts, setWorkoutsState] = useState<Workout[]>([]);
   const [library, setLibrary] = useState<ExerciseLibraryItem[]>([]);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   // `true` após a primeira carga bem-sucedida; sem isso `active` é desconhecido.
   const [loaded, setLoaded] = useState(false);
@@ -27,10 +28,12 @@ export function useWorkouts() {
   const load = useCallback(async () => {
     try {
       setError('');
-      const [data, libraryData] = await Promise.all([
+      const [data, libraryData, templateData] = await Promise.all([
         workoutsApi.list(),
         workoutsApi.listLibrary(),
+        workoutsApi.listTemplates(),
       ]);
+      setTemplates(templateData);
       workoutsRef.current = data;
       setWorkoutsState(data);
       setLibrary(libraryData);
@@ -91,6 +94,38 @@ export function useWorkouts() {
 
   const reopenWorkout = (id: string) =>
     run(() => workoutsApi.update(id, { completed: false }), 'Erro ao reabrir treino');
+
+  // --- Modelos de treino ---
+  /** Cria (id = null) ou substitui um modelo. */
+  const saveTemplate = (id: string | null, payload: TemplatePayload) =>
+    run(
+      () => (id ? workoutsApi.updateTemplate(id, payload) : workoutsApi.createTemplate(payload)),
+      'Erro ao salvar modelo'
+    );
+
+  const removeTemplate = (id: string) =>
+    run(() => workoutsApi.removeTemplate(id), 'Erro ao excluir modelo');
+
+  /**
+   * Inicia um treino a partir do modelo. Não usa `run`: o chamador precisa
+   * distinguir conflito (já há treino em andamento) de falha genérica.
+   */
+  const startTemplate = async (id: string): Promise<'ok' | 'conflict' | 'missing' | 'error'> => {
+    try {
+      setError('');
+      await workoutsApi.startTemplate(id);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) return 'conflict';
+      if (err instanceof ApiError && err.status === 404) {
+        await load();
+        return 'missing';
+      }
+      setError(errorMessage(err, 'Erro ao iniciar treino'));
+      return 'error';
+    }
+    await load();
+    return 'ok';
+  };
 
   // --- Exercícios do treino ---
   const addExercise = (workoutId: string, name: string) =>
@@ -183,6 +218,10 @@ export function useWorkouts() {
   return {
     active,
     history,
+    templates,
+    saveTemplate,
+    removeTemplate,
+    startTemplate,
     library,
     loading,
     loaded,

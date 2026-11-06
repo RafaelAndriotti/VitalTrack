@@ -42,3 +42,20 @@ const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: stri
 if (!userColumns.some((c) => c.name === "weight_kg")) {
   db.exec("ALTER TABLE users ADD COLUMN weight_kg REAL");
 }
+
+// Modelos de treino e rótulos de série. Colunas novas em tabelas antigas: o
+// CREATE TABLE do schema não as adiciona a um banco que já existe.
+function ensureColumn(table: string, column: string, ddl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
+}
+// kind: tipo da série (aquecimento não entra em volume, kcal nem no total).
+ensureColumn("exercise_sets", "kind", "TEXT NOT NULL DEFAULT 'work' CHECK(kind IN ('warmup','work','drop','failure'))");
+// label: nome dado pelo usuário (ex.: "Aquecimento"); nulo = rótulo automático.
+ensureColumn("exercise_sets", "label", "TEXT");
+// order_index: ordem dos exercícios do treino (copiada do modelo).
+ensureColumn("exercises", "order_index", "INTEGER NOT NULL DEFAULT 0");
+// source_template_id: modelo do qual o treino foi iniciado (nulo = treino livre).
+ensureColumn("workouts", "source_template_id", "TEXT REFERENCES workout_templates(id) ON DELETE SET NULL");

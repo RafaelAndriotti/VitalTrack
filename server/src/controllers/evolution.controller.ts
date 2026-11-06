@@ -26,6 +26,7 @@ export const getEvolution = asyncHandler(
               weight: s.weight,
               reps: s.reps,
               completed: !!s.completed,
+              kind: s.kind,
             })),
           }))
         : [],

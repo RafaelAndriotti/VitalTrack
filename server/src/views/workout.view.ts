@@ -54,7 +54,7 @@ export function renderWorkout(
   userWeightKg: number | null
 ): WorkoutResponse {
   const completedSets = exercises.reduce(
-    (n, e) => n + e.sets.filter((s) => !!s.completed).length,
+    (n, e) => n + e.sets.filter((s) => !!s.completed && s.kind !== "warmup").length,
     0
   );
   return {

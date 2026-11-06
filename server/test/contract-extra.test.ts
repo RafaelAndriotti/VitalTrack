@@ -27,12 +27,12 @@ const keys = (o: unknown) => Object.keys(o as object);
 const USER_KEYS = ["id", "email", "name", "created_at"];
 const WORKOUT_KEYS = [
   "id", "user_id", "name", "date", "completed", "notes", "muscle_groups",
-  "created_at", "updated_at", "exercises", "calories_burned", "weight_kg_used", "estimated",
+  "created_at", "updated_at", "source_template_id", "exercises", "calories_burned", "weight_kg_used", "estimated",
 ];
-const EXERCISE_KEYS = ["id", "workout_id", "name", "notes", "created_at", "updated_at"];
+const EXERCISE_KEYS = ["id", "workout_id", "name", "notes", "created_at", "updated_at", "order_index"];
 const SET_KEYS = [
   "id", "exercise_id", "weight", "reps", "completed", "order_index",
-  "created_at", "updated_at",
+  "created_at", "updated_at", "kind", "label",
 ];
 const MEAL_KEYS = ["id", "user_id", "name", "date", "time", "created_at", "updated_at", "meal_items"];
 const MEAL_ITEM_KEYS = [

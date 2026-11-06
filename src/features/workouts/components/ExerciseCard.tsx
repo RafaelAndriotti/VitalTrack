@@ -4,6 +4,7 @@ import { Save, X, Pen, Plus } from 'lucide-react-native';
 import { Input, Button, MaxLength, useDialog } from '@/components/ui';
 import { useBusy } from '@/lib/useBusy';
 import { SetRow, SetsTableHeader } from './SetRow';
+import { autoLabels } from '@/features/workouts/setLabels';
 import { Colors, Spacing, FontSize, BorderRadius, Font, Icon, Elevation } from '@/constants/theme';
 import type { Exercise, UpdateSetPayload } from '@/types';
 
@@ -84,15 +85,19 @@ export function ExerciseCard({
 
       <SetsTableHeader />
 
-      {exercise.exercise_sets?.map((set, index) => (
+      {(() => {
+        const sets = exercise.exercise_sets ?? [];
+        const autos = autoLabels(sets);
+        return sets.map((set, index) => (
         <SetRow
           key={set.id}
-          index={index}
+          auto={autos[index]}
           set={set}
           onUpdate={(fields) => onUpdateSet(set.id, fields)}
           onDelete={() => void removing.guard(() => onRemoveSet(set.id))}
         />
-      ))}
+        ));
+      })()}
 
       <Button
         label="Adicionar série"

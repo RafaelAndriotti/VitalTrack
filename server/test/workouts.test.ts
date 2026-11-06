@@ -15,10 +15,10 @@ after(async () => {
 
 const WORKOUT_KEYS = [
   "calories_burned", "completed", "created_at", "date", "estimated", "exercises", "id",
-  "muscle_groups", "name", "notes", "updated_at", "user_id", "weight_kg_used",
+  "muscle_groups", "name", "notes", "source_template_id", "updated_at", "user_id", "weight_kg_used",
 ];
 const SET_KEYS = [
-  "completed", "created_at", "exercise_id", "id", "order_index", "reps",
+  "completed", "created_at", "exercise_id", "id", "kind", "label", "order_index", "reps",
   "updated_at", "weight",
 ];
 
@@ -168,7 +168,7 @@ test("exercises: add returns exercise_sets [] and persists; validations", async 
   });
   assert.equal(res.status, 201);
   assert.deepEqual(Object.keys(res.body).sort(), [
-    "created_at", "exercise_sets", "id", "name", "notes", "updated_at", "workout_id",
+    "created_at", "exercise_sets", "id", "name", "notes", "order_index", "updated_at", "workout_id",
   ]);
   assert.equal(res.body.workout_id, w.id);
   assert.equal(res.body.name, "Supino");
@@ -211,7 +211,7 @@ test("exercises: PUT partial, 404s; PUT response has no exercise_sets", async ()
   assert.equal(r.status, 200);
   // BUG conhecido: PUT exercise nao devolve exercise_sets (POST devolve []).
   assert.deepEqual(Object.keys(r.body).sort(), [
-    "created_at", "id", "name", "notes", "updated_at", "workout_id",
+    "created_at", "id", "name", "notes", "order_index", "updated_at", "workout_id",
   ]);
   assert.equal(r.body.name, "B");
   assert.equal(r.body.notes, "keep");

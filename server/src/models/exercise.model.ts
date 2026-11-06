@@ -11,7 +11,7 @@ export interface ExerciseRow {
 }
 
 const selectByWorkout = db.prepare(
-  "SELECT * FROM exercises WHERE workout_id = ? ORDER BY created_at ASC"
+  "SELECT * FROM exercises WHERE workout_id = ? ORDER BY order_index ASC, created_at ASC"
 );
 const selectById = db.prepare("SELECT * FROM exercises WHERE id = ?");
 const insertExercise = db.prepare(

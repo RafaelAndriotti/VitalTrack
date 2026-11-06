@@ -3,6 +3,7 @@ import { Check, Repeat } from 'lucide-react-native';
 import { Button, Card } from '@/components/ui';
 import { GroupTags } from './GroupTags';
 import { useBusy } from '@/lib/useBusy';
+import { autoLabels, displayLabel, isWarmup } from '@/features/workouts/setLabels';
 import type { WorkoutsApi } from '@/features/workouts/hooks/useWorkouts';
 import { Colors, Spacing, FontSize, Font, Icon } from '@/constants/theme';
 import type { Workout } from '@/types';
@@ -17,7 +18,8 @@ interface WorkoutSummaryProps {
 export function WorkoutSummary({ workout, data, onViewHistory }: WorkoutSummaryProps) {
   const reopen = useBusy();
   const exercises = workout.exercises ?? [];
-  const sets = exercises.flatMap((e) => e.exercise_sets ?? []);
+  // Aquecimento não entra no total de séries nem no volume.
+  const sets = exercises.flatMap((e) => (e.exercise_sets ?? []).filter((s) => !isWarmup(s)));
   const doneSets = sets.filter((s) => s.completed);
   const volume = doneSets.reduce((sum, s) => sum + Number(s.weight) * Number(s.reps), 0);
   const kcal = Math.round(workout.calories_burned ?? 0);
@@ -52,15 +54,15 @@ export function WorkoutSummary({ workout, data, onViewHistory }: WorkoutSummaryP
       {exercises.map((ex) => (
         <Card key={ex.id}>
           <Text style={styles.exName}>{ex.name}</Text>
-          {(ex.exercise_sets ?? []).map((s, i) => (
+          {(() => { const all = ex.exercise_sets ?? []; const autos = autoLabels(all); return all.map((s, i) => (
             <View key={s.id} style={styles.setRow}>
-              <Text style={styles.setText}>Série {i + 1}</Text>
+              <Text style={styles.setText}>{displayLabel(s, autos[i])}</Text>
               <Text style={styles.setText}>{Number(s.weight)} kg × {s.reps}</Text>
               <Text style={s.completed ? styles.done : styles.missed}>
                 {s.completed ? 'feita' : 'não feita'}
               </Text>
             </View>
-          ))}
+          )); })()}
         </Card>
       ))}
 

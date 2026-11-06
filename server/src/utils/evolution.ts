@@ -12,6 +12,8 @@ export interface EvoSet {
   weight: number | null;
   reps: number | null;
   completed: boolean;
+  /** Aquecimento não entra em volume, kcal nem no destaque. */
+  kind?: string;
 }
 
 export interface EvoExercise {
@@ -90,7 +92,7 @@ function totalsFor(
     let doneSets = 0;
     for (const ex of w.exercises) {
       for (const s of ex.sets) {
-        if (!s.completed) continue;
+        if (!s.completed || s.kind === "warmup") continue;
         doneSets += 1;
         volume += Number(s.weight ?? 0) * Number(s.reps ?? 0);
       }
@@ -135,7 +137,7 @@ export function buildEvolution(input: {
     buckets[idx].treinos += 1;
     for (const ex of w.exercises) {
       for (const s of ex.sets) {
-        if (s.completed) buckets[idx].volume_kg += Math.round(Number(s.weight ?? 0) * Number(s.reps ?? 0));
+        if (s.completed && s.kind !== "warmup") buckets[idx].volume_kg += Math.round(Number(s.weight ?? 0) * Number(s.reps ?? 0));
       }
     }
   }
@@ -167,7 +169,7 @@ function highlightFor(workouts: EvoWorkout[], from: string, to: string): EvoHigh
 
   for (const w of sorted) {
     for (const ex of w.exercises) {
-      const doneWeights = ex.sets.filter((s) => s.completed).map((s) => Number(s.weight ?? 0));
+      const doneWeights = ex.sets.filter((s) => s.completed && s.kind !== "warmup").map((s) => Number(s.weight ?? 0));
       if (doneWeights.length === 0) continue;
       const key = ex.name.trim().toLowerCase();
       const entry = byExercise.get(key) ?? { label: ex.name.trim(), sessions: [] };

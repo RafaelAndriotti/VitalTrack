@@ -92,7 +92,12 @@ export const updateExerciseBody = bodyObject({
 });
 
 // ---- sets ----
+// Tipo e rótulo da série. Rótulo vazio ou nulo volta ao automático (o model trata null).
+const setKind = z.enum(["warmup", "work", "drop", "failure"], { message: "kind must be warmup, work, drop or failure" });
+const setLabel = z.string({ error: "label must be a string" }).trim().max(30, "label must be at most 30 characters").nullish().transform((v) => (v === "" ? null : v));
 export const createSetBody = bodyObject({
+  kind: setKind.nullish(),
+  label: setLabel,
   weight: nonNegative("weight", WEIGHT_MAX),
   reps: nonNegative("reps", REPS_MAX),
   completed: optionalBoolean("completed"),
@@ -102,6 +107,8 @@ export const createSetBody = bodyObject({
 // Partial update; same rules as create. reps may be decimal (the app's
 // NumberInput uses parseFloat, so 8.5 can be sent).
 export const updateSetBody = bodyObject({
+  kind: setKind.nullish(),
+  label: setLabel,
   weight: nonNegative("weight", WEIGHT_MAX),
   reps: nonNegative("reps", REPS_MAX),
   completed: optionalBoolean("completed"),
@@ -123,3 +130,33 @@ export const evolutionQuery = z.object({
     .optional()
     .transform((v) => Number(v ?? "7") as 7 | 30 | 90),
 });
+
+// ---- workout templates (modelos de treino) ----
+const templateSet = z.object({
+  kind: setKind.nullish(),
+  label: setLabel,
+  planned_reps: nonNegativeInt("planned_reps", REPS_MAX),
+  planned_weight: nonNegative("planned_weight", WEIGHT_MAX),
+});
+
+const templateExercise = z.object({
+  name: requiredString(EXERCISE_NAME_REQUIRED, "Exercise name", 100),
+  notes: optionalString("notes", NOTES_MAX),
+  sets: z
+    .array(templateSet, { error: "sets must be an array" })
+    .min(1, "Each exercise needs at least one set")
+    .max(50, "A template exercise can have at most 50 sets"),
+});
+
+// PUT substitui o modelo inteiro: nome, grupos, notas e a árvore completa.
+export const templateBody = bodyObject({
+  name: requiredString("Template name is required", "Template name", 100),
+  muscle_groups: muscleGroups,
+  notes: optionalString("notes", NOTES_MAX),
+  exercises: z
+    .array(templateExercise, { error: "exercises must be an array" })
+    .min(1, "Template needs at least one exercise")
+    .max(30, "A template can have at most 30 exercises"),
+});
+
+export type TemplateBody = z.infer<typeof templateBody>;

@@ -13,6 +13,8 @@ import type {
   CreateLibraryExercisePayload,
   Evolution,
   EvolutionPeriod,
+  WorkoutTemplate,
+  TemplatePayload,
 } from '@/types';
 
 const exercisePath = (workoutId: string, exerciseId: string) =>
@@ -20,6 +22,21 @@ const exercisePath = (workoutId: string, exerciseId: string) =>
 
 export const workoutsApi = {
   list: () => request<Workout[]>('/workouts'),
+
+  // Modelos de treino
+  listTemplates: () => request<WorkoutTemplate[]>('/workouts/templates'),
+
+  createTemplate: (data: TemplatePayload) =>
+    request<WorkoutTemplate>('/workouts/templates', { method: 'POST', body: data }),
+
+  updateTemplate: (id: string, data: TemplatePayload) =>
+    request<WorkoutTemplate>(`/workouts/templates/${enc(id)}`, { method: 'PUT', body: data }),
+
+  removeTemplate: (id: string) =>
+    request<void>(`/workouts/templates/${enc(id)}`, { method: 'DELETE' }),
+
+  startTemplate: (id: string) =>
+    request<Workout>(`/workouts/templates/${enc(id)}/start`, { method: 'POST' }),
 
   evolution: (days: EvolutionPeriod) =>
     request<Evolution>(`/workouts/evolution?days=${days}`),
