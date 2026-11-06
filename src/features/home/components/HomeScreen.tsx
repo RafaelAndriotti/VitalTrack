@@ -8,6 +8,7 @@ import { WorkoutHeroCard } from './WorkoutHeroCard';
 import { DayRings } from './DayRings';
 import type { DayGoal } from './DayRings';
 import { MealsToday } from './MealsToday';
+import { EvolutionCard } from './EvolutionCard';
 import { HomeHeader } from './HomeHeader';
 import { WeekStrip } from './WeekStrip';
 import { Colors } from '@/constants/theme';
@@ -78,6 +79,8 @@ export function HomeScreen() {
       <WeekStrip week={currentWeek()} trained={trained} />
 
       <DayRings goals={goals} />
+
+      <EvolutionCard />
 
       <WorkoutHeroCard active={active} />
 

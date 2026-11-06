@@ -36,3 +36,9 @@ const workoutColumns = db
 if (!workoutColumns.some((c) => c.name === "muscle_groups")) {
   db.exec("ALTER TABLE workouts ADD COLUMN muscle_groups TEXT");
 }
+
+// Peso corporal (kg) usado no cálculo de calorias queimadas. Nulo = usar padrão.
+const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+if (!userColumns.some((c) => c.name === "weight_kg")) {
+  db.exec("ALTER TABLE users ADD COLUMN weight_kg REAL");
+}

@@ -2,6 +2,7 @@ import { workoutModel, type WorkoutRow } from "../models/workout.model.js";
 import { exerciseModel } from "../models/exercise.model.js";
 import { exerciseSetModel } from "../models/exerciseSet.model.js";
 import { exerciseLibraryModel } from "../models/exerciseLibrary.model.js";
+import { userModel } from "../models/user.model.js";
 import {
   renderWorkout,
   renderExercise,
@@ -26,20 +27,21 @@ import {
   updateSetBody,
 } from "../validators/workouts.validator.js";
 
-// Attach exercises (with their sets) to a workout row and render it.
-function loadWorkout(workout: WorkoutRow): WorkoutResponse {
+// Attach exercises (with their sets) to a workout row and render it, including
+// the calorie estimate. userWeightKg is the owner's body weight (null = unset).
+function loadWorkout(workout: WorkoutRow, userWeightKg: number | null): WorkoutResponse {
   const exercises = exerciseModel.listByWorkout(workout.id).map((exercise) => ({
     exercise,
     sets: exerciseSetModel.listByExercise(exercise.id),
   }));
-  return renderWorkout(workout, exercises);
+  return renderWorkout(workout, exercises, userWeightKg);
 }
 
 // Load a single owned workout fully hydrated. Throws (500) if the row is missing;
 // only used right after a successful insert/update.
 function getWorkout(id: string, userId: string): WorkoutResponse {
   const workout = requireFound(workoutModel.findOwned({ id, userId }));
-  return loadWorkout(workout);
+  return loadWorkout(workout, userModel.findWeightKg(userId));
 }
 
 // GET /api/workouts/library/exercises — list global and user's exercises
@@ -87,8 +89,10 @@ export const deleteExerciseLibrary = asyncHandler(
 // GET /api/workouts — list user's workouts with exercises and sets
 export const listWorkouts = asyncHandler(
   async (req, res) => {
-    const workouts = workoutModel.listByUser(requireUserId(req));
-    res.json(workouts.map(loadWorkout));
+    const userId = requireUserId(req);
+    const weightKg = userModel.findWeightKg(userId);
+    const workouts = workoutModel.listByUser(userId);
+    res.json(workouts.map((w) => loadWorkout(w, weightKg)));
   },
   "List workouts error",
   "Failed to fetch workouts"

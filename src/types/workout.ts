@@ -25,6 +25,12 @@ export interface Workout {
   muscle_groups: string[];
   created_at: string;
   exercises: Exercise[];
+  /** Calorias estimadas pelas séries concluídas (calculado no backend). */
+  calories_burned: number;
+  /** Peso (kg) usado no cálculo. */
+  weight_kg_used: number;
+  /** true quando o peso é o padrão, não o informado pelo usuário. */
+  estimated: boolean;
 }
 
 export interface ExerciseLibraryItem {
@@ -63,4 +69,40 @@ export type UpdateSetPayload = Partial<CreateSetPayload>;
 export interface CreateLibraryExercisePayload {
   name: string;
   muscle_group: string;
+}
+
+export type EvolutionPeriod = 7 | 30 | 90;
+
+export interface EvolutionTotals {
+  treinos: number;
+  volume_kg: number;
+  kcal: number;
+}
+
+export interface EvolutionBucket {
+  /** Primeiro dia do intervalo (YYYY-MM-DD). */
+  start: string;
+  treinos: number;
+  volume_kg: number;
+}
+
+export interface EvolutionHighlight {
+  exercise: string;
+  first_kg: number;
+  last_kg: number;
+  max_kg: number;
+  points: { date: string; max_kg: number }[];
+}
+
+/** Resposta de GET /api/workouts/evolution. */
+export interface Evolution {
+  period_days: EvolutionPeriod;
+  start: string;
+  end: string;
+  current: EvolutionTotals;
+  previous: EvolutionTotals;
+  bucket_days: number;
+  buckets: EvolutionBucket[];
+  highlight: EvolutionHighlight | null;
+  kcal_estimated: boolean;
 }

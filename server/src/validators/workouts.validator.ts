@@ -115,3 +115,11 @@ export type CreateExerciseBody = z.infer<typeof createExerciseBody>;
 export type UpdateExerciseBody = z.infer<typeof updateExerciseBody>;
 export type CreateSetBody = z.infer<typeof createSetBody>;
 export type UpdateSetBody = z.infer<typeof updateSetBody>;
+
+// ---- evolution (GET /api/workouts/evolution?days=7|30|90) ----
+export const evolutionQuery = z.object({
+  days: z
+    .enum(["7", "30", "90"], { message: "days must be 7, 30 or 90" })
+    .optional()
+    .transform((v) => Number(v ?? "7") as 7 | 30 | 90),
+});

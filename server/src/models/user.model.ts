@@ -21,6 +21,7 @@ const insertUser = db.prepare(
 const selectPublicById = db.prepare(
   "SELECT id, email, name, created_at FROM users WHERE id = ?"
 );
+const selectWeightById = db.prepare("SELECT weight_kg FROM users WHERE id = ?");
 const selectWithHashByEmail = db.prepare(
   "SELECT id, email, name, password_hash, created_at FROM users WHERE email = ?"
 );
@@ -35,6 +36,12 @@ export const userModel = {
     const id = randomUUID();
     insertUser.run(id, input.email, input.passwordHash, input.name);
     return id;
+  },
+
+  /** Body weight in kg, or null when the user has not set it. */
+  findWeightKg(id: string): number | null {
+    const row = selectWeightById.get(id) as { weight_kg: number | null } | undefined;
+    return row?.weight_kg ?? null;
   },
 
   findPublicById(id: string): PublicUserRow | undefined {

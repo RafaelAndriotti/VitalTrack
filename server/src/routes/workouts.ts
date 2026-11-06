@@ -17,6 +17,8 @@ import {
   deleteSet,
 } from "../controllers/workouts.controller.js";
 import { validate } from "../middlewares/validate.js";
+import { getEvolution } from "../controllers/evolution.controller.js";
+import { evolutionQuery } from "../validators/workouts.validator.js";
 import {
   idParams,
   exerciseParams,
@@ -43,6 +45,9 @@ router.post(
   createExerciseLibrary
 );
 router.delete("/library/exercises/:id", validate({ params: idParams }), deleteExerciseLibrary);
+
+// Evolution (antes de "/:id" para não colidir com rotas de treino)
+router.get("/evolution", validate({ query: evolutionQuery }), getEvolution);
 
 // Workouts
 router.get("/", listWorkouts);

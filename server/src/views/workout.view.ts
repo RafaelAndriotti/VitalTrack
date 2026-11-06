@@ -2,6 +2,10 @@ import type { WorkoutRow } from "../models/workout.model.js";
 import type { ExerciseRow } from "../models/exercise.model.js";
 import type { ExerciseSetRow } from "../models/exerciseSet.model.js";
 import type { ExerciseLibraryRow } from "../models/exerciseLibrary.model.js";
+import {
+  estimateStrengthCalories,
+  type CaloriesEstimate,
+} from "../utils/calories.js";
 
 export type ExerciseSetResponse = Omit<ExerciseSetRow, "completed"> & {
   completed: boolean;
@@ -17,7 +21,7 @@ export type WorkoutResponse = Omit<WorkoutRow, "completed" | "muscle_groups"> & 
   completed: boolean;
   muscle_groups: string[];
   exercises: ExerciseWithSetsResponse[];
-};
+} & CaloriesEstimate;
 
 /** An exercise row together with its (already loaded) set rows. */
 export interface ExerciseTree {
@@ -41,12 +45,18 @@ export function renderExerciseWithSets(
   return { ...exercise, exercise_sets: sets.map(renderSet) };
 }
 
-// Normalize 0/1 to boolean, CSV muscle_groups to string[], and nest
-// exercises (with their sets) under the workout.
+// Normalize 0/1 to boolean, CSV muscle_groups to string[], nest exercises
+// (with their sets) under the workout, and attach the calorie estimate
+// computed from the completed sets and the user's body weight.
 export function renderWorkout(
   workout: WorkoutRow,
-  exercises: ExerciseTree[]
+  exercises: ExerciseTree[],
+  userWeightKg: number | null
 ): WorkoutResponse {
+  const completedSets = exercises.reduce(
+    (n, e) => n + e.sets.filter((s) => !!s.completed).length,
+    0
+  );
   return {
     ...workout,
     completed: !!workout.completed,
@@ -54,6 +64,7 @@ export function renderWorkout(
       ? String(workout.muscle_groups).split(",").filter(Boolean)
       : [],
     exercises: exercises.map((e) => renderExerciseWithSets(e.exercise, e.sets)),
+    ...estimateStrengthCalories(completedSets, userWeightKg),
   };
 }
 

@@ -11,6 +11,8 @@ import type {
   CreateSetPayload,
   UpdateSetPayload,
   CreateLibraryExercisePayload,
+  Evolution,
+  EvolutionPeriod,
 } from '@/types';
 
 const exercisePath = (workoutId: string, exerciseId: string) =>
@@ -18,6 +20,9 @@ const exercisePath = (workoutId: string, exerciseId: string) =>
 
 export const workoutsApi = {
   list: () => request<Workout[]>('/workouts'),
+
+  evolution: (days: EvolutionPeriod) =>
+    request<Evolution>(`/workouts/evolution?days=${days}`),
 
   create: (data: CreateWorkoutPayload) =>
     request<Workout>('/workouts', { method: 'POST', body: data }),

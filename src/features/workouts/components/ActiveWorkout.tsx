@@ -13,9 +13,11 @@ import type { Workout } from '@/types';
 interface ActiveWorkoutProps {
   workout: Workout;
   data: WorkoutsApi;
+  /** Chamado após o treino ser marcado como concluído com sucesso. */
+  onFinished: (workoutId: string) => void;
 }
 
-export function ActiveWorkout({ workout, data }: ActiveWorkoutProps) {
+export function ActiveWorkout({ workout, data, onFinished }: ActiveWorkoutProps) {
   const confirm = useConfirm();
   const [picking, setPicking] = useState(false);
   const pick = useBusy();
@@ -40,7 +42,10 @@ export function ActiveWorkout({ workout, data }: ActiveWorkoutProps) {
   }
 
   const handleFinish = () => {
-    void finishing.guard(() => data.finishWorkout(workout.id));
+    void finishing.guard(async () => {
+      const ok = await data.finishWorkout(workout.id);
+      if (ok) onFinished(workout.id);
+    });
   };
 
   return (

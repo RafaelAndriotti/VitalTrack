@@ -11,9 +11,9 @@ interface ExercisePickerProps {
 }
 
 export function ExercisePicker({ library, groups, onPick, onCancel }: ExercisePickerProps) {
-  // Exercícios sem grupo (muscle_group vazio) aparecem sempre — nada some.
+  // Só exercícios dos grupos do treino. Sem grupo algum no treino, libera a biblioteca toda.
   const filtered = library.filter(
-    (item) => !item.muscle_group || groups.length === 0 || groups.includes(item.muscle_group)
+    (item) => groups.length === 0 || (!!item.muscle_group && groups.includes(item.muscle_group))
   );
 
   return (

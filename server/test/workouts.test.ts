@@ -14,8 +14,8 @@ after(async () => {
 });
 
 const WORKOUT_KEYS = [
-  "completed", "created_at", "date", "exercises", "id", "muscle_groups",
-  "name", "notes", "updated_at", "user_id",
+  "calories_burned", "completed", "created_at", "date", "estimated", "exercises", "id",
+  "muscle_groups", "name", "notes", "updated_at", "user_id", "weight_kg_used",
 ];
 const SET_KEYS = [
   "completed", "created_at", "exercise_id", "id", "order_index", "reps",
